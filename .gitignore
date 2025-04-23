@@ -1,0 +1,56 @@
+## User-specific files
+.idea/
+.vs/
+.vscode/
+
+## Windows image file caches
+Thumbs.db
+Desktop.ini
+
+## Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+## Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+## JetBrains Rider
+.idea/
+
+## ASP.NET Core
+bin/
+obj/
+
+## ASP.NET Core Build Files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## VS for Mac
+.vscode/
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+## NPM packages
+node_modules/
+
+## VS Code directories
+.vscode/
+
+# Blazor
+wwwroot/

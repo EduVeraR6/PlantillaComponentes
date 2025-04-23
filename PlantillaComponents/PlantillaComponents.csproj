@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<UpToDateCheckBuilt Include="wwwroot/css/app.css" Set="Css" />
+		<UpToDateCheckBuilt Include="tailwind.config.js" Set="Css" />
+	</ItemGroup>
+
+	<Target Name="Tailwind" BeforeTargets="Build">
+		<Exec Command="npm run css:build" />
+	</Target>
+
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.36" />
+  </ItemGroup>
+
+</Project>
