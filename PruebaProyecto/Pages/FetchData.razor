@@ -1,0 +1,83 @@
+﻿@page "/"
+@using PlantillaComponents.Components.Button
+@using PlantillaComponents.Components.CardSelectableGroup
+@using PlantillaComponents.Components.CheckboxField
+@using PlantillaComponents.Components.ThemeToggle
+@using System.ComponentModel.DataAnnotations
+
+<div class="mt-5">
+    <Button Variant="primary" Href="/home">Ir al inicio</Button>
+
+    <Button Variant="danger" OnClick="BorrarItem" Disabled="false">
+        Eliminar
+    </Button>
+
+
+    <Button Variant="primary" Href="/home">Ir al inicio 2</Button>
+
+
+    <CheckboxField Name="AceptaTerminos"
+    Label="Acepto los términos"
+    @bind-Value="AceptaTerminos"
+    CheckClassName="..." 
+    LabelClassName="..." 
+    ErrorClassName="..." />
+
+
+
+    <CardSelectableGroup Name="plan"
+    @bind-BoundValue="PlanSeleccionado"
+    Options="@Opciones"
+    Error="Selecciona un plan"
+    GroupClassName="mt-4"
+    CardClassName="bg-white shadow"
+    OptionClassName="ml-2" />
+
+
+
+
+    <ThemeToggle />
+
+
+</div>
+
+
+
+
+
+@code {
+    private string? PlanSeleccionado;
+    private string? Error;
+    public bool AceptaTerminos = true;
+
+
+    private List<CardOption> Opciones = new()
+    {
+        new()
+        {
+            Value = "basic",
+            Label = "Básico",
+            Content = builder => builder.AddContent(0, "Contenido básico"),
+        },
+        new()
+        {
+            Value = "premium",
+            Label = "Premium",
+            Content = builder => builder.AddContent(0, "Contenido premium"),
+        },
+        new()
+        {
+            Value = "vip",
+            Label = "VIP",
+            IsLoadingContent = true,
+            Content = builder => builder.AddContent(0, ""), // Mientras carga
+        }
+    };
+
+
+
+    void BorrarItem()
+    {
+        Console.WriteLine("Prueba");
+    }
+}

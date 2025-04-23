@@ -1,0 +1,37 @@
+﻿@using PlantillaComponents.Services
+@inject ThemeService ThemeService
+
+<div @onclick="ToggleTheme"
+     class="relative w-16 h-8 flex items-center cursor-pointer rounded-full p-1 transition-colors duration-300"
+     style="background-color: var(--primary)">
+    <div class="@IconContainerClass">
+        <i class="@IconClass"></i>
+    </div>
+</div>
+
+@code {
+    private string IconClass => ThemeService.CurrentTheme == "light"
+        ? "fas fa-cloud-sun text-xs text-white"
+        : "fas fa-moon text-xs text-white";
+
+    private string IconContainerClass => $@"
+        absolute left-1 h-6 w-6 rounded-full bg-[var(--secondary)]
+        flex items-center justify-center shadow-md transition-transform duration-300
+    {(ThemeService.CurrentTheme == "dark" ? "transform translate-x-8" : "")}";
+
+    private async Task ToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync();
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
+}
