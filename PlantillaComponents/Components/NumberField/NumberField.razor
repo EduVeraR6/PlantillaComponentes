@@ -1,0 +1,40 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="relative">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label for="@Name" class="@LabelClassName block">
+            @Label 
+            @if (IsRequired) 
+            {
+                <span class="text-[var(--error)]">*</span>
+            }
+        </label>
+    }
+
+    <input type="text" 
+           id="@Name" 
+           @bind="Value"
+           placeholder="@Placeholder" 
+           class="border border-[var(--border)] rounded-md p-2 w-full 
+                  focus:outline-none focus:border-[var(--focus)] placeholder:text-[var(--placeholder)] 
+                  bg-[var(--bg)] text-[var(--font)] @InputClassName" 
+           @oninput="HandleInput" 
+           disabled="@Disabled" 
+           @onblur="HandleBlur" />
+
+    @if (ShowTooltip && !string.IsNullOrEmpty(TooltipMessage))
+    {
+        <Tooltip Message="@TooltipMessage" Variant="info" />
+    }
+
+    @if (ErrorMessage != null)
+    {
+        <span class="text-[var(--error)] text-xs @ErrorClassName">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            @ErrorMessage
+        </span>
+    }
+</div>

@@ -2,8 +2,12 @@
 @using PlantillaComponents.Components.Button
 @using PlantillaComponents.Components.CardSelectableGroup
 @using PlantillaComponents.Components.CheckboxField
+@using PlantillaComponents.Components.DatePickerField
+@using PlantillaComponents.Components.DropDownField
+@using PlantillaComponents.Components.NumberField
 @using PlantillaComponents.Components.ThemeToggle
 @using System.ComponentModel.DataAnnotations
+@using static PlantillaComponents.Components.DropDownField.DropDownField
 
 <div class="mt-5">
     <Button Variant="primary" Href="/home">Ir al inicio</Button>
@@ -34,6 +38,38 @@
     OptionClassName="ml-2" />
 
 
+    <DatePickerField Label="Fecha de nacimiento"
+                     Name="birthdate"
+                     IsRequired="true"
+                     RequiredMsg="Por favor seleccione una fecha."
+                     MinDate="new DateTime(2025, 1, 1)"
+                     MaxDate="DateTime.Today"
+                     Value="@fechaNacimiento"
+                     ValueChanged="@((val) => fechaNacimiento = val)" />
+
+
+<DropDownField Label="Selecciona una opción"
+               Name="dropdown"
+               PlaceholderText="Seleccione una opción"
+               @bind-Value="selectedValue"
+               Options="dropdownOptions"
+                IsRequired="true" 
+               ErrorMessage="@errorMessage" />
+
+      <NumberField 
+        Label="Precio"
+        Name="Precio"
+        Min="10"
+        Max="1000"
+        IsRequired="true"
+        Placeholder="Ingresa el precio"
+        OnChange="HandlePrecioChange"
+        ShowTooltip="true"
+        Disabled="false"
+        NumberType="float"
+        DefaultValue="100" />
+
+
 
 
     <ThemeToggle />
@@ -42,10 +78,8 @@
 </div>
 
 
-
-
-
 @code {
+    private DateTime? fechaNacimiento;
     private string? PlanSeleccionado;
     private string? Error;
     public bool AceptaTerminos = true;
@@ -80,4 +114,36 @@
     {
         Console.WriteLine("Prueba");
     }
+
+    private string selectedValue;
+    private string errorMessage;
+
+    private List<Option> dropdownOptions = new List<Option>
+    {
+        new Option { Value = "1", Label = "Opción 1" },
+        new Option { Value = "2", Label = "Opción 2" },
+        new Option { Value = "3", Label = "Opción 3" }
+    };
+
+    private void OnValueChanged(string newValue)
+    {
+        selectedValue = newValue;
+
+        // Lógica para mostrar un mensaje de error si es necesario
+        if (string.IsNullOrEmpty(newValue))
+        {
+            errorMessage = "Este campo es obligatorio";
+        }
+        else
+        {
+            errorMessage = null;
+        }
+    }
+
+    private void HandlePrecioChange(double value)
+    {
+        // Aquí se puede manejar el cambio de valor del campo "Precio"
+        Console.WriteLine($"Nuevo valor del precio: {value}");
+    }
+
 }

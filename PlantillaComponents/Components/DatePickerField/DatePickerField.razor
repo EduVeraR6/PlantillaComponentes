@@ -1,0 +1,33 @@
+﻿@using System.Globalization
+
+<div class="relative w-full">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="block mb-1 text-neutral-700 @LabelClassName" for="@Name">
+            @Label
+            @if (IsRequired)
+            {
+                <span class="text-[var(--error)] ml-1">*</span>
+            }
+        </label>
+    }
+
+    <input id="@Name"
+           name="@Name"
+           type="date"
+           class="w-full px-2 py-1 border border-[var(--border)] rounded-sm bg-[var(--bg)] text-[var(--primary)] focus:outline-none focus:ring-[var(--focus)] dark:bg-gray-800 dark:text-white dark:border-gray-600"
+           value="@GetFormattedValue()"
+           @onchange="HandleChange"
+           min="@MinDate?.ToString("yyyy-MM-dd")"
+           max="@MaxDate?.ToString("yyyy-MM-dd")"
+           placeholder="@PlaceholderText" />
+
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p class="text-[var(--error)] text-xs mt-1 @ErrorClassName">
+            <FaIcon Icon="IconName.ExclamationCircle" Class="mr-2" />
+            @ErrorMessage
+        </p>
+    }
+</div>
