@@ -1,0 +1,121 @@
+﻿@typeparam TItem
+
+<div class="flex flex-col rounded-lg shadow-md border border-[var(--border)] @TableClassName">
+    @if (Searchable)
+    {
+        <input type="text" class="mb-4 p-2 ..." placeholder="@SearchPlaceholder"
+               @bind="GlobalFilter" @bind:event="oninput" />
+    }
+
+    <div class="overflow-x-auto rounded-lg">
+        <table class="min-w-full text-center ...">
+            <thead>
+                <tr>
+                    @if (RowExpand != null)
+                    {
+                        <th></th>
+                    }
+                    @foreach (var column in Columns)
+                    {
+                        <th class="@column.Meta">@column.Header</th>
+                    }
+                    @if (ShowActions)
+                    {
+                        <th>Acciones</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (Loading)
+                {
+                    <tr><td colspan="@TotalColSpan">Cargando...</td></tr>
+                }
+                else if (FilteredData.Count == 0)
+                {
+                    <tr><td colspan="@TotalColSpan">No hay registros.</td></tr>
+                }
+                else
+                {
+                    @foreach (var row in PagedData)
+                    {
+                        <tr>
+                            @if (RowExpand != null)
+                            {
+                                <td>
+                                    <button @onclick="() => ToggleRow(row)">
+                                        <i class="fa fa-chevron-right @(ExpandedRows.Contains(row) ? "rotate-90" : "")"></i>
+                                    </button>
+                                </td>
+                            }
+                            @foreach (var column in Columns)
+                            {
+                                <td>@column.Cell(row)</td>
+                            }
+                            @if (ShowActions)
+                            {
+                                <td>
+                                    @if (OnSelectAction.HasDelegate)
+                                    {
+                                        <button @onclick="() => OnSelectAction.InvokeAsync(row)">
+                                            <i class="fa fa-edit text-blue-500"></i>
+                                        </button>
+                                    }
+                                    @if (OnDeleteAction.HasDelegate)
+                                    {
+
+                                        <button @onclick="() => AskDelete(row)">
+                                            <i class="fa fa-trash-alt text-red-500"></i>
+                                        </button>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                        @if (ExpandedRows.Contains(row))
+                        {
+                            <tr>
+                                <td colspan="@TotalColSpan">
+                                    @RowExpand(row)
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (ShowOptions)
+    {
+        <div class="mt-4 flex justify-between px-4 py-2 border-t">
+            <span>
+                Mostrando @((PageIndex * PageSize) + 1) - @Math.Min((PageIndex + 1) * PageSize, FilteredData.Count)
+                de @FilteredData.Count
+            </span>
+            <div>
+                <button @onclick="FirstPage" disabled="@IsFirstPage">«</button>
+                <button @onclick="PreviousPage" disabled="@IsFirstPage">‹</button>
+                Página @PageIndex + 1 de @PageCount
+                <button @onclick="NextPage" disabled="@IsLastPage">›</button>
+                <button @onclick="LastPage" disabled="@IsLastPage">»</button>
+
+                <select @onchange="OnPageSizeChanged">
+                    @foreach (var size in PageSizeOptions)
+                    {
+                        <option value="@size">@($"Mostrar {size}")</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+
+    @if (ShowDeleteConfirm)
+    {
+        <div class="fixed z-50 p-4 bg-[var(--bg)] border rounded shadow-lg animate-fadeIn">
+            <div>¿Seguro que deseas eliminar?</div>
+            <div class="flex justify-end space-x-2 mt-4">
+                <button class="bg-red-500 text-white px-4 py-2 rounded" @onclick="ConfirmDelete">Sí</button>
+                <button class="bg-gray-300 px-4 py-2 rounded" @onclick="CancelDelete">No</button>
+            </div>
+        </div>
+    }
+</div>

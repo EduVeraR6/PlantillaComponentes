@@ -5,6 +5,8 @@
 @using PlantillaComponents.Components.DatePickerField
 @using PlantillaComponents.Components.DropDownField
 @using PlantillaComponents.Components.NumberField
+@using PlantillaComponents.Components.QueryTable
+@using PlantillaComponents.Components.Table
 @using PlantillaComponents.Components.ThemeToggle
 @using System.ComponentModel.DataAnnotations
 @using static PlantillaComponents.Components.DropDownField.DropDownField
@@ -38,41 +40,78 @@
     OptionClassName="ml-2" />
 
 
+
+
     <DatePickerField Label="Fecha de nacimiento"
-                     Name="birthdate"
-                     IsRequired="true"
-                     RequiredMsg="Por favor seleccione una fecha."
-                     MinDate="new DateTime(2025, 1, 1)"
-                     MaxDate="DateTime.Today"
-                     Value="@fechaNacimiento"
-                     ValueChanged="@((val) => fechaNacimiento = val)" />
+    Name="birthdate"
+    IsRequired="true"
+    RequiredMsg="Por favor seleccione una fecha."
+    MinDate="new DateTime(2025, 1, 1)"
+    MaxDate="DateTime.Today"
+    Value="@fechaNacimiento"
+    ValueChanged="@((val) => fechaNacimiento = val)" />
 
 
-<DropDownField Label="Selecciona una opción"
-               Name="dropdown"
-               PlaceholderText="Seleccione una opción"
-               @bind-Value="selectedValue"
-               Options="dropdownOptions"
-                IsRequired="true" 
-               ErrorMessage="@errorMessage" />
+    <DropDownField Label="Selecciona una opción"
+    Name="dropdown"
+    PlaceholderText="Seleccione una opción"
+    @bind-Value="selectedValue"
+    Options="dropdownOptions"
+    IsRequired="true" 
+    ErrorMessage="@errorMessage" />
 
-      <NumberField 
-        Label="Precio"
-        Name="Precio"
-        Min="10"
-        Max="1000"
-        IsRequired="true"
-        Placeholder="Ingresa el precio"
-        OnChange="HandlePrecioChange"
-        ShowTooltip="true"
-        Disabled="false"
-        NumberType="float"
-        DefaultValue="100" />
+    <NumberField 
+    Label="Precio"
+    Name="Precio"
+    Min="10"
+    Max="1000"
+    IsRequired="true"
+    Placeholder="Ingresa el precio"
+    OnChange="HandlePrecioChange"
+    ShowTooltip="true"
+    Disabled="false"
+    NumberType="float"
+    DefaultValue="100" />
 
 
 
 
     <ThemeToggle />
+
+
+    <div class="mx-6 mt-6 px-6 ">
+
+        <Table TItem="Usuario"
+        Data="usuarios"
+        Columns="columnas"
+        OnSelectAction="Editar"
+        OnDeleteAction="Eliminar"
+        Searchable="true"
+        ShowOptions="true"
+        ShowActions="true"
+        DefaultSize="10"
+        SearchPlaceholder="Buscar usuario..." />
+    </div>
+
+
+    <div class="mx-6 mt-6 px-6 ">
+
+        <QueryTable TItem="Product"
+        Title="Product List"
+        FetchUrl="api/products"
+        Columns="@_columns"
+        OnSelectAction="EditProduct"
+        OnDeleteAction="DeleteProduct"
+        OnStatusChange="ToggleProductStatus"
+        OnNewAction="CreateNewProduct"
+        StatusAccessor="Status"
+        OnDeleteMassiveAction="DeleteMultipleProducts"
+        DefaultSize="10"
+        RowExpand="ProductDetailsTemplate">
+        </QueryTable>
+    </div>
+
+
 
 
 </div>
@@ -145,5 +184,168 @@
         // Aquí se puede manejar el cambio de valor del campo "Precio"
         Console.WriteLine($"Nuevo valor del precio: {value}");
     }
+
+
+    public class Usuario
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Correo { get; set; }
+    }
+
+
+    private List<Usuario> usuarios = new()
+    {
+        new() { Id = 1, Nombre = "Juan Pérez", Correo = "juan@mail.com" },
+        new() { Id = 2, Nombre = "Laura Gómez", Correo = "laura@mail.com" },
+        new() { Id = 3, Nombre = "Carlos Ruiz", Correo = "carlos@mail.com" },
+    };
+
+    private List<ColumnDef<Usuario>> columnas = new()
+    {
+        new ColumnDef<Usuario>
+        {
+            Header = "ID",
+            Cell = u => __builder =>
+            {
+                __builder.AddContent(0, u.Id);
+            }
+        },
+        new ColumnDef<Usuario>
+        {
+            Header = "Nombre",
+            Cell = u => __builder =>
+            {
+                __builder.AddContent(0, u.Nombre);
+            }
+        },
+        new ColumnDef<Usuario>
+        {
+            Header = "Correo",
+            Cell = u => __builder =>
+            {
+                __builder.AddContent(0, u.Correo);
+            }
+        },
+    };
+
+    private Task Editar(Usuario usuario)
+    {
+        Console.WriteLine($"Editar: {usuario.Nombre}");
+        return Task.CompletedTask;
+    }
+
+    private Task Eliminar(Usuario usuario)
+    {
+        Console.WriteLine($"Eliminar: {usuario.Nombre}");
+        usuarios.Remove(usuario);
+        return Task.CompletedTask;
+    }
+    private List<QueryTable<Product>.ColumnDefinition> _columns;
+
+    public class Product
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public int Stock { get; set; }
+        public string Category { get; set; }
+        public string Status { get; set; } // "A" for active, "I" for inactive
+    }
+
+    protected override void OnInitialized()
+    {
+        _columns = new List<QueryTable<Product>.ColumnDefinition>
+            {
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "ID",
+                Accessor = "Id",
+                ClassName = "w-[5%] text-center"
+            },
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "Nombre",
+                Accessor = "Name",
+                ClassName = "whitespace-normal"
+            },
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "Precio",
+                Accessor = "Price",
+                Cell = item => $"${item.Price:F2}"
+            },
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "Stock",
+                Accessor = "Stock"
+            },
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "Categoría",
+                Accessor = "Category"
+            },
+            new QueryTable<Product>.ColumnDefinition
+            {
+                Header = "Estado",
+                Accessor = "Status",
+                Cell = item => item.Status == "A" ? "Activo" : "Inactivo"
+            }
+            };
+    }
+
+    private void EditProduct(Product product)
+    {
+        Console.WriteLine("Prueba Edit Producto");
+    }
+
+    private async Task DeleteProduct(Product product)
+    {
+        // API call to delete product
+        // Example: await Http.DeleteAsync($"api/products/{product.Id}");
+
+        // Refresh the table after deletion
+        Console.WriteLine("Prueba Delete Producto");
+    }
+
+    private async Task ToggleProductStatus((Product Product, string NewStatus) data)
+    {
+        // API call to update product status
+        // Example: await Http.PutAsJsonAsync($"api/products/{data.Product.Id}/status", new { status = data.NewStatus });
+
+        // Refresh the table after status change
+        Console.WriteLine("Prueba Toggle Producto");
+    }
+
+    private void CreateNewProduct()
+    {
+        Console.WriteLine("Prueba New Producto");
+    }
+
+    private async Task DeleteMultipleProducts(List<Product> products)
+    {
+        // API call to delete multiple products
+        // Example: await Http.PostAsJsonAsync("api/products/delete-batch", products.Select(p => p.Id).ToList());
+
+        // Refresh the table after batch deletion
+        Console.WriteLine("Prueba Delete varios Producto");
+    }
+
+    private RenderFragment<Product> ProductDetailsTemplate => product =>
+    @<div class="bg-[var(--bg-alt)] p-4 rounded-md shadow-sm">
+        <h3 class="font-bold mb-2">Detalles del producto</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm"><span class="font-semibold">ID:</span> @product.Id</p>
+                <p class="text-sm"><span class="font-semibold">Nombre:</span> @product.Name</p>
+                <p class="text-sm"><span class="font-semibold">Precio:</span> $@product.Price.ToString("F2")</p>
+            </div>
+            <div>
+                <p class="text-sm"><span class="font-semibold">Stock:</span> @product.Stock</p>
+                <p class="text-sm"><span class="font-semibold">Categoría:</span> @product.Category</p>
+                <p class="text-sm"><span class="font-semibold">Estado:</span> @(product.Status == "A" ? "Activo" : "Inactivo")</p>
+            </div>
+        </div>
+    </div>;
 
 }
