@@ -1,0 +1,52 @@
+﻿@using Microsoft.AspNetCore.Components
+@inject IServiceProvider Services
+
+<div class="my-4 gap-4">
+    <div class="flex flex-wrap gap-2 @GroupClassName">
+        @foreach (var option in Options)
+        {
+            var isDisabled = option.IsLoadingContent;
+            var isChecked = option.Value == BoundValue;
+
+            <div class="border rounded-lg p-2 flex justify-center @CardClassName @(isDisabled ? "cursor-not-allowed" : "cursor-pointer")"
+                 style="width:@CardSizeXpx; height:@CardSizeYpx;">
+                <label class="rounded-lg transition-all flex flex-col @(isDisabled ? "cursor-not-allowed" : "cursor-pointer")">
+                    <div class="flex items-center gap-2 mb-4">
+                        <input type="radio"
+                               name="@Name"
+                               value="@option.Value"
+                               checked="@isChecked"
+                               disabled="@isDisabled"
+                               @onchange="@(() => OnSelect(option.Value))"
+                               class="border appearance-none w-4 h-4 rounded-full checked:bg-[var(--primary)] focus:ring-[var(--focus)] @(isDisabled ? "cursor-not-allowed" : "cursor-pointer") @OptionClassName" />
+
+                        @if (!string.IsNullOrEmpty(option.Label))
+                        {
+                            <span class="text-sm text-[var(--font)] @(isDisabled ? "cursor-not-allowed" : "cursor-pointer")">@option.Label</span>
+                        }
+                    </div>
+
+                    <div class="border rounded-lg p-2 flex items-center justify-center overflow-hidden 
+                        @(isDisabled ? "cursor-not-allowed" : "cursor-pointer") 
+                        @(option.IsLoadingContent ? "animate-pulseBackground" : "")
+                        bg-[var(--bg)] dark:bg-[var(--background-dark)]"
+                         style="width:@(CardSizeX - 50)px; height:@(CardSizeY - 50)px;">
+                        @if (!option.IsLoadingContent)
+                        {
+                            @option.Content
+                        }
+                    </div>
+
+                </label>
+            </div>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <span class="text-[var(--error)] text-xs mt-2 @ErrorClassName">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            @Error
+        </span>
+    }
+</div>

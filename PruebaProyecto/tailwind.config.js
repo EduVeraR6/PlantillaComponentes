@@ -1,8 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: [
-        './**/*.{razor,html}',
-        './**/(Layout|Pages)/*.{razor,html}', // Include only Layout and Pages folders
+        './Pages/**/*.{razor,cshtml}',
+        './Components/**/*.{razor,cshtml}',
+        '../PlantillaComponents/**/*.{razor,cshtml}',    // TODO: todo PlantillaComponents
     ],
     darkMode: 'class',
     theme: {
@@ -139,6 +140,7 @@ module.exports = {
                     '--disabled': theme('colors.disabled.dark'),
                 },
             });
+            console.log("plugin cargado");
         },
     ],
 }

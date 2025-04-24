@@ -1,0 +1,16 @@
+﻿@inject NavigationManager NavigationManager
+
+
+<button @onclick="HandleClick"
+        class="px-6 py-2 font-bold rounded-lg transition duration-300 focus:outline-none focus:ring-2
+               @(Variant == "outline" ? "border border-[var(--border)] text-[var(--font)] hover:bg-[var(--secondaryalthover)]" :
+                 Variant == "danger" ? "bg-red-500 text-white hover:bg-red-600" :
+                 Variant == "primary" ? "bg-[var(--primary)] text-white hover:bg-[var(--secondaryalt)]" : "")
+               @(Disabled ? "opacity-60 cursor-not-allowed" : "")
+               @ClassName"
+        disabled="@Disabled"
+        type="@Type">
+    @ChildContent
+</button>
+
+

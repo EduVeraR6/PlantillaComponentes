@@ -1,0 +1,99 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes pulseBackground {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.animate-pulseBackground {
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: pulseBackground 1.5s infinite linear;
+}
+
+
+/* Estilos básicos */
+.select-control {
+    border-width: 1px;
+    border-radius: 8px;
+    box-shadow: none;
+    padding: 0.4rem;
+    margin: 0 -4px;
+}
+
+    .select-control:disabled {
+        background-color: var(--disabled);
+        border-color: var(--disabled);
+        color: var(--disabled);
+    }
+
+    .select-control:focus {
+        border-color: var(--focus);
+        cursor: text;
+    }
+
+/* Estilos para opciones */
+.select-option {
+    display: flex;
+    background-color: var(--bg);
+    color: var(--font);
+    cursor: pointer;
+}
+
+    .select-option.selected,
+    .select-option.focused {
+        background-color: var(--secondaryalt);
+    }
+
+    .select-option:active {
+        background-color: var(--secondaryalt);
+    }
+
+/* Estilos para el placeholder */
+.select-placeholder {
+    color: var(--placeholder);
+}
+
+/* Estilos para valores seleccionados */
+.select-single-value {
+    color: var(--font);
+}
+
+.select-multi-value {
+    background-color: var(--highlight);
+}
+
+.select-multi-value-label {
+    color: var(--font);
+}
+
+.select-multi-value-remove {
+    color: var(--error);
+}
+
+    .select-multi-value-remove:hover {
+        background-color: var(--hover);
+        color: var(--font);
+    }
+
+/* Estilos del menú */
+.select-menu {
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+}
+
+.select-menu-list {
+    background-color: var(--bg);
+    border-radius: 8px;
+    padding: 0;
+}

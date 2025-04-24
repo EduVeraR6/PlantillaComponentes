@@ -1,0 +1,20 @@
+﻿<div class="flex items-center gap-2">
+    <input type="checkbox"
+           id="@Name"
+           class="border border-[var(--border)] accent-[var(--secondary)] rounded-sm focus:ring-[var(--focus)] focus:outline-none bg-[var(--bg)] text-[var(--primary)] cursor-pointer @(IsDisabled ? "cursor-not-allowed bg-[var(--disabled)]" : "") @CheckClassName"
+           @bind="Value"
+           disabled="@IsDisabled" />
+
+
+    <label for="@Name" class="text-neutral-700 cursor-pointer @LabelClassName">
+        @Label
+    </label>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <span class="text-[var(--error)] text-xs @ErrorClassName">
+            <Fa Icon="Icon.ExclamationCircle" Class="mr-2" />
+            @ErrorMessage
+        </span>
+    }
+</div>

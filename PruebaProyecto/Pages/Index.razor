@@ -1,0 +1,21 @@
+﻿@page "/"
+
+<div class="mt-5">
+    <Button Variant="primary" Href="/home">Ir al inicio</Button>
+
+    <Button Variant="danger" OnClick="BorrarItem" Disabled="false">
+        Eliminar
+    </Button>
+
+    <CardSelectableGroup Name="plan"
+                         @bind-BoundValue="PlanSeleccionado"
+                         Options="@Opciones"
+                         Error="Selecciona un plan"
+                         GroupClassName="mt-4"
+                         CardClassName="bg-white shadow"
+                         OptionClassName="ml-2" />
+
+</div>
+
+
+
