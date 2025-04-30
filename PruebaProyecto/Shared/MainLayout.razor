@@ -1,18 +1,19 @@
-﻿@using PlantillaComponents.Services
+﻿@using PlantillaComponents.Components.SideMenu
+@using PlantillaComponents.Services
 @inherits LayoutComponentBase
 @inject ThemeService ThemeService
 
-<div class="page">
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+<div class="flex justify-around h-screen">
+    <div class="w-60">
+        <SideMenu />
+    </div>
+    <main class="h-full w-full overflow-y-auto p-4">
+        <article class="content">
             @Body
         </article>
     </main>
 </div>
+
 
 @code {
     protected override async Task OnInitializedAsync()

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="h-full bg-[var(--bg)]" lang="en">
 
 <head>
     <meta charset="utf-8" />
@@ -16,10 +16,20 @@
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 </head>
 
-<body>
+<body class="h-full">
     <div id="app">Loading...</div>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js');</script>
 </body>
-
 </html>
+<script>
+    window.obtenerPosicionElemento = (idElemento) => {
+        const el = document.getElementById(idElemento);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        return {
+            top: rect.top + window.scrollY,
+            left: rect.left + window.scrollX
+        };
+    };
+</script>
