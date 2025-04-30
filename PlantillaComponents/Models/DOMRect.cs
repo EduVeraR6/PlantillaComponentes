@@ -13,6 +13,23 @@ namespace PlantillaComponents.Models
         public double Left { get; set; }
     }
 
+  
+
+    public class SelectOption
+    {
+        public string Value { get; set; }
+        public string Text { get; set; }
+    }
+
+
+    public class Cliente
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Email { get; set; }
+        public string TipoCliente { get; set; }
+        public string Estado { get; set; }
+    }
 
 
 }

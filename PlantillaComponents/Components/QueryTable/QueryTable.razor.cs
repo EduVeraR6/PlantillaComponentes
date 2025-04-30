@@ -3,33 +3,32 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using PlantillaComponents.Models;
+using PlantillaComponents.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace PlantillaComponents.Components.QueryTable
 {
-    public partial class QueryTable<TItem> : ComponentBase
+    public partial class QueryTable<TItem> : ComponentBase where TItem : class
     {
-        public class DefinicionColumna
+      
+
+
+        public class Posicion
         {
-            public string Encabezado { get; set; }
-            public string Accesor { get; set; }
-            public string ClaseCss { get; set; }
-            public bool? PermitirOrdenamiento { get; set; }
-            public Func<TItem, object> Celda { get; set; }
+            public int Top { get; set; }
+            public int Left { get; set; }
         }
 
-        [Parameter] public List<DefinicionColumna> Columnas { get; set; } = new();
+
+        [Parameter] public List<DefinicionColumna<TItem>> Columnas { get; set; } = new();
         [Parameter] public List<TItem> Elementos { get; set; } = new();
         [Parameter] public string Titulo { get; set; }
         [Parameter] public Dictionary<string, object> ParametrosConsulta { get; set; } = new();
-        [Parameter] public string LlaveFiltro { get; set; } = "filtro";
-        [Parameter] public string LlavePagina { get; set; } = "pagina";
-        [Parameter] public string LlaveTamano { get; set; } = "tamano";
-        [Parameter] public string LlaveOrden { get; set; } = "orden";
         [Parameter] public string LlaveDatosRespuesta { get; set; } = "contenido";
         [Parameter] public string LlaveTotalRespuesta { get; set; } = "elementosTotales";
         [Parameter] public int RetardoBusqueda { get; set; } = 300;
@@ -57,11 +56,11 @@ namespace PlantillaComponents.Components.QueryTable
         [Parameter] public bool Cargando { get; set; } = false;
         [Parameter] public int TamanoPagina { get; set; } = 5;
 
+        // Propiedades del componente
         private int TotalElementos { get; set; } = 0;
         private bool HayError { get; set; } = false;
         private string FiltroGlobal { get; set; } = "";
         private int IndicePagina { get; set; }
-
         private string OrdenConsulta { get; set; } = "";
         private Dictionary<string, bool> FilasExpandidas { get; set; } = new();
         private List<TItem> FilasSeleccionadas { get; set; } = new();
@@ -70,9 +69,13 @@ namespace PlantillaComponents.Components.QueryTable
         private TItem DatosSuperpuestos { get; set; }
         private Posicion PosicionSuperpuesta { get; set; }
         private System.Threading.Timer _temporizadorBusqueda;
-
         private List<TItem> ElementosFiltrados { get; set; } = new();
         private List<TItem> ElementosPaginados { get; set; } = new();
+        private Dictionary<string, bool> FilaEnEdicion { get; set; } = new();
+        private string columnaOrdenada;
+        private bool ordenAscendente = true;
+
+        private Dictionary<string, Dictionary<string, string>> ErroresValidacion = new Dictionary<string, Dictionary<string, string>>();
 
         protected override async Task OnInitializedAsync()
         {
@@ -140,7 +143,10 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void FiltrarDatos()
         {
-            ElementosFiltrados = Elementos.Where(e => string.IsNullOrEmpty(FiltroGlobal) || ContieneFiltro(e, FiltroGlobal)).ToList();
+            ElementosFiltrados = Elementos.Where(e =>
+                string.IsNullOrEmpty(FiltroGlobal) || ContieneFiltro(e, FiltroGlobal)
+            ).ToList();
+
             TotalElementos = ElementosFiltrados.Count;
             AplicarPaginado();
         }
@@ -157,13 +163,16 @@ namespace PlantillaComponents.Components.QueryTable
                 fin = Math.Min(TamanoPagina, ElementosFiltrados.Count);
             }
 
-            ElementosPaginados = ElementosFiltrados.Skip(inicio).Take(TamanoPagina).ToList();
+            ElementosPaginados = ElementosFiltrados
+                .Skip(inicio)
+                .Take(TamanoPagina)
+                .ToList();
         }
-
 
         private void AlternarExpansionFila(string idFila, TItem item)
         {
-            if (DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item)) return;
+            if (DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item))
+                return;
 
             if (FilasExpandidas.ContainsKey(idFila))
                 FilasExpandidas[idFila] = !FilasExpandidas[idFila];
@@ -181,11 +190,10 @@ namespace PlantillaComponents.Components.QueryTable
 
         private async Task EliminarElemento(TItem item)
         {
-            await InvokeAsync(StateHasChanged); // Asegura renderizado si es necesario
+            await InvokeAsync(StateHasChanged);
             PosicionSuperpuesta = await JS.InvokeAsync<Posicion>("obtenerPosicionElemento", "btnEliminarCliente");
             DatosSuperpuestos = item;
         }
-
 
         private async Task ConfirmarEliminar()
         {
@@ -211,7 +219,6 @@ namespace PlantillaComponents.Components.QueryTable
 
             await AlCambiarEstado.InvokeAsync((item, nuevoEstado));
         }
-
 
         private async Task ConfirmarEliminarMasivo()
         {
@@ -243,7 +250,7 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void IrPaginaSiguiente()
         {
-            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            int totalPaginas = GetTotalPages();
             if (IndicePagina < totalPaginas - 1)
             {
                 IndicePagina++;
@@ -253,7 +260,7 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void IrUltimaPagina()
         {
-            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            int totalPaginas = GetTotalPages();
             if (IndicePagina < totalPaginas - 1)
             {
                 IndicePagina = totalPaginas - 1;
@@ -269,7 +276,7 @@ namespace PlantillaComponents.Components.QueryTable
 
         private List<int> ObtenerPaginasParaMostrar()
         {
-            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            int totalPaginas = GetTotalPages();
             int maxPaginas = EsMovil ? 3 : PaginasAMostrar;
             int inicio = Math.Max(0, IndicePagina - maxPaginas / 2);
             int fin = Math.Min(totalPaginas - 1, inicio + maxPaginas - 1);
@@ -296,6 +303,7 @@ namespace PlantillaComponents.Components.QueryTable
         {
             int cantidad = Columnas.Count;
             if (FilaExpandida != null) cantidad++;
+            if (AlEliminarMasivo.HasDelegate) cantidad++;
             if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate) cantidad++;
             return cantidad;
         }
@@ -305,15 +313,24 @@ namespace PlantillaComponents.Components.QueryTable
             return objeto?.GetType().GetProperty(propiedad)?.GetValue(objeto);
         }
 
-
-        private object ObtenerValorCelda(TItem item, DefinicionColumna column)
+        private object ObtenerValorCelda(TItem item, DefinicionColumna<TItem> column)
         {
-            if (column.Celda != null)
+            if (column.Plantilla != null)
             {
-                return column.Celda(item);
+                return column.Plantilla(item);
             }
 
             return ObtenerValorPropiedad(item, column.Accesor);
+        }
+
+        private string ObtenerValorFechaFormateado(TItem item, string propiedad)
+        {
+            var valor = ObtenerValorPropiedad(item, propiedad);
+            if (valor is DateTime fecha)
+            {
+                return fecha.ToString("yyyy-MM-dd");
+            }
+            return "";
         }
 
         private int GetTotalPages()
@@ -331,6 +348,211 @@ namespace PlantillaComponents.Components.QueryTable
             return Math.Min((IndicePagina + 1) * TamanoPagina, TotalElementos);
         }
 
-    }
+        // Lógica de edición en fila de la tabla
+        private void AlternarEdicionFila(string idFila, TItem item)
+        {
+            if (FilaEnEdicion.ContainsKey(idFila))
+            {
+                FilaEnEdicion[idFila] = !FilaEnEdicion[idFila];
+            }
+            else
+            {
+                FilaEnEdicion[idFila] = true;
+            }
 
+            if (FilaEnEdicion[idFila])
+            {
+                AlSeleccionar.InvokeAsync(item);
+            }
+        }
+
+        private void AsignarValorPropiedad(TItem item, string? propertyName, string? value)
+        {
+            if (string.IsNullOrEmpty(propertyName))
+                return;
+
+            var property = item.GetType().GetProperty(propertyName);
+            if (property == null)
+                return;
+
+            try
+            {
+                var rowId = item.GetHashCode().ToString();
+                var column = Columnas.FirstOrDefault(c => c.Accesor == propertyName);
+
+                // Limpiar errores previos para esta propiedad
+                if (ErroresValidacion.ContainsKey(rowId) && ErroresValidacion[rowId].ContainsKey(propertyName))
+                {
+                    ErroresValidacion[rowId].Remove(propertyName);
+                }
+
+                // Validar que no esté vacío si es requerido
+                if (column?.Requerido == true && string.IsNullOrWhiteSpace(value))
+                {
+                    if (!ErroresValidacion.ContainsKey(rowId))
+                        ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                    ErroresValidacion[rowId][propertyName] = "Este campo es requerido";
+                    return;
+                }
+
+                // Validar con Regex si está configurado
+                if (!string.IsNullOrEmpty(column?.PatronRegex) && !string.IsNullOrEmpty(value))
+                {
+                    var regex = new Regex(column.PatronRegex);
+                    if (!regex.IsMatch(value))
+                    {
+                        if (!ErroresValidacion.ContainsKey(rowId))
+                            ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                        ErroresValidacion[rowId][propertyName] = column.MensajeError ?? "Formato inválido";
+                        return;
+                    }
+                }
+
+                // Convertir el valor al tipo de propiedad y asignarlo
+                Type propertyType = property.PropertyType;
+                object? convertedValue = null;
+
+                try
+                {
+                    if (propertyType == typeof(string))
+                    {
+                        convertedValue = value;
+                    }
+                    else if (propertyType == typeof(int) || propertyType == typeof(int?))
+                    {
+                        if (int.TryParse(value, out int intValue))
+                            convertedValue = intValue;
+                        else
+                            throw new FormatException("El valor debe ser un número entero");
+                    }
+                    else if (propertyType == typeof(decimal) || propertyType == typeof(decimal?))
+                    {
+                        if (decimal.TryParse(value, out decimal decimalValue))
+                            convertedValue = decimalValue;
+                        else
+                            throw new FormatException("El valor debe ser un número decimal");
+                    }
+                    else if (propertyType == typeof(double) || propertyType == typeof(double?))
+                    {
+                        if (double.TryParse(value, out double doubleValue))
+                            convertedValue = doubleValue;
+                        else
+                            throw new FormatException("El valor debe ser un número");
+                    }
+                    else if (propertyType == typeof(DateTime) || propertyType == typeof(DateTime?))
+                    {
+                        if (DateTime.TryParse(value, out DateTime dateValue))
+                            convertedValue = dateValue;
+                        else
+                            throw new FormatException("Formato de fecha inválido");
+                    }
+                    else if (propertyType == typeof(bool) || propertyType == typeof(bool?))
+                    {
+                        if (bool.TryParse(value, out bool boolValue))
+                            convertedValue = boolValue;
+                        else
+                            convertedValue = value?.ToLower() == "si" || value?.ToLower() == "sí" || value?.ToLower() == "true";
+                    }
+                    else
+                    {
+                        // Para otros tipos, intentar usar un convertidor
+                        convertedValue = Convert.ChangeType(value, propertyType);
+                    }
+
+                    property.SetValue(item, convertedValue);
+                }
+                catch (Exception ex)
+                {
+                    if (!ErroresValidacion.ContainsKey(rowId))
+                        ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                    ErroresValidacion[rowId][propertyName] = ex.Message;
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+        }
+
+        private void GuardarCambios(TItem item, string idFila)
+        {
+            FilaEnEdicion[idFila] = false;
+        }
+
+        private void CancelarEdicion(string idFila)
+        {
+            FilaEnEdicion[idFila] = false;
+        }
+
+        private bool TieneErrorValidacion(TItem item, string propiedad)
+        {
+            var claveItem = ObtenerClaveItem(item);
+            return ErroresValidacion.ContainsKey(claveItem) &&
+                   ErroresValidacion[claveItem].ContainsKey(propiedad);
+        }
+
+        private string ObtenerMensajeError(TItem item, string propiedad)
+        {
+            var claveItem = ObtenerClaveItem(item);
+            if (ErroresValidacion.TryGetValue(claveItem, out var erroresPropiedad) &&
+                erroresPropiedad.TryGetValue(propiedad, out var mensaje))
+            {
+                return mensaje;
+            }
+            return string.Empty;
+        }
+
+        private string ObtenerClaveItem<TItem>(TItem item)
+        {
+            var prop = typeof(TItem).GetProperty("Id");
+            if (prop != null)
+            {
+                return prop.GetValue(item)?.ToString();
+            }
+
+            throw new InvalidOperationException("El tipo no contiene una propiedad 'Id'.");
+        }
+
+        // Ordenar columnas de la tabla
+        private void OrdenarColumna(string accesor)
+        {
+            if (columnaOrdenada == accesor)
+            {
+                // Si ya está ordenado por esta columna, cambia la dirección
+                ordenAscendente = !ordenAscendente;
+            }
+            else
+            {
+                // Si es una nueva columna, por defecto ordenamos ascendentemente
+                columnaOrdenada = accesor;
+                ordenAscendente = true;
+            }
+
+            // Ordenar los datos
+            OrdenarDatos();
+        }
+
+        private void OrdenarDatos()
+        {
+            var propiedad = typeof(TItem).GetProperty(columnaOrdenada);
+
+            if (propiedad != null)
+            {
+                // Ordenar según la dirección
+                if (ordenAscendente)
+                {
+                    ElementosFiltrados = ElementosFiltrados.OrderBy(x => propiedad.GetValue(x, null)).ToList();
+                }
+                else
+                {
+                    ElementosFiltrados = ElementosFiltrados.OrderByDescending(x => propiedad.GetValue(x, null)).ToList();
+                }
+            }
+
+            AplicarPaginado();
+        }
+    }
 }

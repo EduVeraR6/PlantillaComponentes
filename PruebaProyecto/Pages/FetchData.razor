@@ -12,7 +12,7 @@
 @using PlantillaComponents.Models
 @using static PlantillaComponents.Components.DropDownField.DropDownField
 
-<div>
+<div class="h-full overflow-y-auto">
     <ThemeToggle />
 
 
@@ -53,9 +53,39 @@
         AlNuevo="HandleNewAction"
         AlCambiarEstado="HandleStatus"
         Columnas="@definicionColumnas">
+
+            <FilaExpandida Context="cliente">
+                <div class="p-4 bg-gray-100 rounded">
+                    <strong>Datos adicionales:</strong>
+                    <p>Hola</p>
+                </div>
+            </FilaExpandida>
+
+
         </QueryTable>
 
     </div>
+
+    <div class="mx-6 mt-6 px-6">
+        <QueryTable TItem="Cliente"
+        Elementos="@clientes"
+        Titulo="Lista de Clientes"
+        MostrarOpciones="true"
+        Ordenable="true"
+        BusquedaHabilitada="true"
+        AccesorEstado="Estado"
+        AlCambiarEstado="CambiarEstadoCliente"
+        AlSeleccionar="SeleccionarCliente"
+        AlEliminar="EliminarCliente"
+        AlNuevo="NuevoCliente"
+        AlEliminarMasivo="EliminarVariosClientes"
+        Columnas="definicionColumnas">
+        </QueryTable>
+
+    </div>
+
+
+
 </div>
 
 
@@ -68,19 +98,94 @@
     private List<Cliente> clientes = new List<Cliente>();
     private bool loading = true;
 
-    private List<QueryTable<Cliente>.DefinicionColumna> definicionColumnas;
+    private List<DefinicionColumna<Cliente>> definicionColumnas;
 
     protected override async Task OnInitializedAsync()
     {
-        // Definir las columnas que se mostrarán en la tabla
-        definicionColumnas = new List<QueryTable<Cliente>.DefinicionColumna>
+
+        definicionColumnas = new List<DefinicionColumna<Cliente>>
         {
-            new QueryTable<Cliente>.DefinicionColumna { Encabezado = "ID", Accesor = "Id" },
-            new QueryTable<Cliente>.DefinicionColumna { Encabezado = "Nombre", Accesor = "Nombre" },
-            new QueryTable<Cliente>.DefinicionColumna { Encabezado = "Email", Accesor = "Email" },
-            new QueryTable<Cliente>.DefinicionColumna { Encabezado = "Tipo Cliente", Accesor = "TipoCliente" },
-             new QueryTable<Cliente>.DefinicionColumna { Encabezado = "Estado", Accesor = "Estado" }
+            new DefinicionColumna<Cliente>
+            {
+                Encabezado = "ID",
+                Accesor = "Id",
+                Plantilla = c => c.Id,
+                ClaseCss = "text-center",
+                PermitirOrdenamiento = true,
+                Editable = false,
+                Requerido = true,
+                PatronRegex = @"^\d+$",
+                MensajeError = "El ID debe ser un número entero.",
+                TipoInput = "number",
+                Min = "1",
+                Max = null,
+                Step = "1",
+                FormatoFecha = null,
+                FormatoNumero = "N0"
+            },
+            new DefinicionColumna<Cliente>
+            {
+                Encabezado = "Nombre",
+                Accesor = "Nombre",
+                Plantilla = c => c.Nombre,
+                ClaseCss = "text-left",
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = true,
+                PatronRegex = @"^[a-zA-Z\sáéíóúÁÉÍÓÚñÑ]+$",
+                MensajeError = "El nombre solo puede contener letras y espacios.",
+                TipoInput = "text",
+                FormatoNumero = null
+            },
+            new DefinicionColumna<Cliente>
+            {
+                Encabezado = "Email",
+                Accesor = "Email",
+                Plantilla = c => c.Email,
+                ClaseCss = "text-left",
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = true,
+                PatronRegex = @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                MensajeError = "Debe ser un correo electrónico válido.",
+                TipoInput = "email"
+            },
+            new DefinicionColumna<Cliente>
+            {
+                Encabezado = "Tipo Cliente",
+                Accesor = "TipoCliente",
+                Plantilla = c => c.TipoCliente,
+                ClaseCss = "text-center",
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = true,
+                TipoInput = "select",
+                OpcionesSelect = new List<SelectOption>
+                {
+                    new SelectOption { Value = "Regular", Text = "Regular" },
+                    new SelectOption { Value = "VIP", Text = "VIP" },
+                    new SelectOption { Value = "Premium", Text= "Premium" }
+                }
+            },
+            new DefinicionColumna<Cliente>
+            {
+                Encabezado = "Estado",
+                Accesor = "Estado",
+                Plantilla = c => c.Estado,
+                ClaseCss = "text-center",
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = true,
+                TipoInput = "select",
+                OpcionesSelect = new List<SelectOption>
+                {
+                    new SelectOption { Value = "A", Text = "Activo" },
+                    new SelectOption { Value = "I", Text = "Inactivo" }
+                }
+            }
         };
+
+
 
         clientes = new List<Cliente>
             {
@@ -105,6 +210,101 @@
             };
         loading = false;
     }
+
+    private async Task CambiarEstadoCliente(Cliente cliente)
+    {
+        try
+        {
+            cliente.Estado = cliente.Estado == "A" ? "I" : "A";
+
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    private void CambiarEstadoCliente((Cliente cliente, string status) datos)
+    {
+        Console.WriteLine($"El estado del cliente {datos.cliente.Nombre} cambió a {datos.status}");
+    }
+
+
+    private async Task SeleccionarCliente(Cliente cliente)
+    {
+        Console.WriteLine(cliente.Nombre);
+    }
+
+    private async Task EliminarCliente(Cliente cliente)
+    {
+        try
+        {
+            clientes.Remove(cliente);
+            Console.WriteLine(cliente.Nombre);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(cliente.Nombre);
+        }
+    }
+
+    private async Task EliminarVariosClientes(List<Cliente> clientesSeleccionados)
+    {
+        try
+        {
+            foreach (var cliente in clientesSeleccionados.ToList())
+            {
+                clientes.Remove(cliente);
+            }
+
+        }
+        catch (Exception ex)
+        {
+
+        }
+    }
+
+    private void NuevoCliente()
+    {
+        Console.WriteLine("Nuevo Cliente");
+    }
+
+    private async Task GuardarCambios(Cliente cliente)
+    {
+        try
+        {
+            Console.WriteLine(cliente.Nombre);
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(cliente.Nombre);
+
+        }
+    }
+
+    private async Task<bool> ValidarCliente(Cliente cliente)
+    {
+        // Validación personalizada adicional a las reglas definidas
+        if (string.IsNullOrEmpty(cliente.Email) && string.IsNullOrEmpty(cliente.Email))
+        {
+            Console.WriteLine(cliente.Nombre);
+
+            return false;
+        }
+
+        // Ejemplo de validación basada en lógica de negocios
+        if (cliente.TipoCliente == "3")
+        {
+            Console.WriteLine(cliente.Nombre);
+            return false;
+        }
+
+        return true;
+    }
+
+
+
 
     private async Task EliminarSeleccionados(List<Cliente> seleccionados)
     {
@@ -137,19 +337,5 @@
         // Lógica para agregar un nuevo cliente
         Console.WriteLine("Agregar nuevo cliente");
     }
-
-
-    public class Cliente
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Email { get; set; }
-        public string TipoCliente { get; set; }
-        public string Estado { get; set; }
-    }
-
-
-
-
 
 }
