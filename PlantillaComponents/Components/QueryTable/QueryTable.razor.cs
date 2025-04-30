@@ -6,362 +6,331 @@ using PlantillaComponents.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace PlantillaComponents.Components.QueryTable
 {
     public partial class QueryTable<TItem> : ComponentBase
     {
-        [Parameter] public List<ColumnDefinition> Columns { get; set; } = new();
-        [Parameter] public string FetchUrl { get; set; }
-        [Parameter] public string SearchUrl { get; set; }
-        [Parameter] public string Title { get; set; }
-        [Parameter] public Dictionary<string, object> QueryParams { get; set; } = new();
-        [Parameter] public string FilterKey { get; set; } = "filter";
-        [Parameter] public string PageKey { get; set; } = "page";
-        [Parameter] public string SizeKey { get; set; } = "size";
-        [Parameter] public string SortKey { get; set; } = "sort";
-        [Parameter] public string ResponseDataKey { get; set; } = "content";
-        [Parameter] public string ResponseTotalCount { get; set; } = "totalElements";
-        [Parameter] public int DebounceDelay { get; set; } = 300;
-        [Parameter] public bool ShowOptions { get; set; } = true;
-        [Parameter] public bool Searchable { get; set; } = true;
-        [Parameter] public EventCallback<TItem> OnSelectAction { get; set; }
-        [Parameter] public EventCallback<TItem> OnDeleteAction { get; set; }
-        [Parameter] public string StatusAccessor { get; set; }
-        [Parameter] public EventCallback<(TItem, string)> OnStatusChange { get; set; }
-        [Parameter] public EventCallback OnNewAction { get; set; }
-        [Parameter] public EventCallback<List<TItem>> OnDeleteMassiveAction { get; set; }
-        [Parameter] public int DefaultPage { get; set; } = 0;
-        [Parameter] public int DefaultSize { get; set; } = 5;
-        [Parameter] public string DefaultSortQuery { get; set; } = "";
-        [Parameter] public bool Sortable { get; set; } = true;
-        [Parameter] public int PagesToShow { get; set; } = 5;
-        [Parameter] public string TableClassName { get; set; }
-        [Parameter] public RenderFragment<TItem> RowExpand { get; set; }
-        [Parameter] public Func<TItem, bool> DisableRowExpand { get; set; }
-        [Parameter] public string NotFoundLabel { get; set; } = "No se encontraron resultados";
-        [Parameter] public string RefreshEvent { get; set; }
-        [Parameter] public string SearchPlaceholder { get; set; } = "Buscar...";
-
-        private List<TItem> Data { get; set; } = new();
-        private int TotalCount { get; set; } = 0;
-        private bool Loading { get; set; } = true;
-        private bool Error { get; set; } = false;
-        private string GlobalFilter { get; set; } = "";
-        private int PageIndex { get; set; }
-        private int PageSize { get; set; }
-        private string SortQuery { get; set; } = "";
-        private Dictionary<string, bool> ExpandedRows { get; set; } = new();
-        private List<TItem> SelectedRows { get; set; } = new();
-        private bool ShowMassDeleteConfirmation { get; set; } = false;
-        private bool IsMobile { get; set; } = false;
-        private TItem OverlayData { get; set; }
-        private (double Top, double Left) OverlayPosition { get; set; }
-        private System.Threading.Timer _debounceTimer;
-        private DotNetObjectReference<QueryTable<TItem>> _dotNetObjectRef;
-
-        public class ColumnDefinition
+        public class DefinicionColumna
         {
-            public string Header { get; set; }
-            public string Accessor { get; set; }
-            public string ClassName { get; set; }
-            public bool? EnableSorting { get; set; }
-            public Func<TItem, object> Cell { get; set; }
+            public string Encabezado { get; set; }
+            public string Accesor { get; set; }
+            public string ClaseCss { get; set; }
+            public bool? PermitirOrdenamiento { get; set; }
+            public Func<TItem, object> Celda { get; set; }
         }
+
+        [Parameter] public List<DefinicionColumna> Columnas { get; set; } = new();
+        [Parameter] public List<TItem> Elementos { get; set; } = new();
+        [Parameter] public string Titulo { get; set; }
+        [Parameter] public Dictionary<string, object> ParametrosConsulta { get; set; } = new();
+        [Parameter] public string LlaveFiltro { get; set; } = "filtro";
+        [Parameter] public string LlavePagina { get; set; } = "pagina";
+        [Parameter] public string LlaveTamano { get; set; } = "tamano";
+        [Parameter] public string LlaveOrden { get; set; } = "orden";
+        [Parameter] public string LlaveDatosRespuesta { get; set; } = "contenido";
+        [Parameter] public string LlaveTotalRespuesta { get; set; } = "elementosTotales";
+        [Parameter] public int RetardoBusqueda { get; set; } = 300;
+        [Parameter] public bool MostrarOpciones { get; set; } = true;
+        [Parameter] public bool BusquedaHabilitada { get; set; } = true;
+        [Parameter] public EventCallback<TItem> AlSeleccionar { get; set; }
+        [Parameter] public EventCallback<TItem> AlEliminar { get; set; }
+        [Parameter] public string AccesorEstado { get; set; }
+        [Parameter] public EventCallback<(TItem, string)> AlCambiarEstado { get; set; }
+        [Parameter] public EventCallback AlNuevo { get; set; }
+        [Parameter] public EventCallback<List<TItem>> AlEliminarMasivo { get; set; }
+        [Parameter] public int PaginaPorDefecto { get; set; } = 0;
+        [Parameter] public int TamanoPorDefecto { get; set; } = 5;
+        [Parameter] public string OrdenPorDefecto { get; set; } = "";
+        [Parameter] public bool Ordenable { get; set; } = true;
+        [Parameter] public int PaginasAMostrar { get; set; } = 5;
+        [Parameter] public string ClaseTabla { get; set; }
+        [Parameter] public RenderFragment<TItem> FilaExpandida { get; set; }
+        [Parameter] public Func<TItem, bool> DeshabilitarFilaExpandida { get; set; }
+        [Parameter] public string EtiquetaNoEncontrado { get; set; } = "No se encontraron resultados";
+        [Parameter] public string EventoRefrescar { get; set; }
+        [Parameter] public string PlaceholderBusqueda { get; set; } = "Buscar...";
+
+        [Parameter] public List<TItem> Datos { get; set; } = new();
+        [Parameter] public bool Cargando { get; set; } = false;
+        [Parameter] public int TamanoPagina { get; set; } = 5;
+
+        private int TotalElementos { get; set; } = 0;
+        private bool HayError { get; set; } = false;
+        private string FiltroGlobal { get; set; } = "";
+        private int IndicePagina { get; set; }
+
+        private string OrdenConsulta { get; set; } = "";
+        private Dictionary<string, bool> FilasExpandidas { get; set; } = new();
+        private List<TItem> FilasSeleccionadas { get; set; } = new();
+        private bool MostrarConfirmacionEliminarMasivo { get; set; } = false;
+        private bool EsMovil { get; set; } = false;
+        private TItem DatosSuperpuestos { get; set; }
+        private Posicion PosicionSuperpuesta { get; set; }
+        private System.Threading.Timer _temporizadorBusqueda;
+
+        private List<TItem> ElementosFiltrados { get; set; } = new();
+        private List<TItem> ElementosPaginados { get; set; } = new();
 
         protected override async Task OnInitializedAsync()
         {
-            _dotNetObjectRef = DotNetObjectReference.Create(this);
-            PageIndex = DefaultPage;
-            PageSize = DefaultSize;
-            SortQuery = DefaultSortQuery;
+            IndicePagina = PaginaPorDefecto;
+            TamanoPagina = TamanoPagina <= 0 ? TamanoPorDefecto : TamanoPagina;
+            OrdenConsulta = OrdenPorDefecto;
 
-            await CheckIfMobile();
-            await LoadData();
+            ElementosFiltrados = Elementos.ToList();
+            TotalElementos = Elementos.Count;
+
+            AplicarPaginado();
+            await Task.CompletedTask;
         }
 
-        protected override async Task OnAfterRenderAsync(bool firstRender)
+        protected override async Task OnParametersSetAsync()
         {
-            if (firstRender)
+            ElementosFiltrados = Elementos.Where(e =>
+                string.IsNullOrEmpty(FiltroGlobal) ||
+                ContieneFiltro(e, FiltroGlobal)
+            ).ToList();
+
+            TotalElementos = ElementosFiltrados.Count;
+            AplicarPaginado();
+
+            await base.OnParametersSetAsync();
+        }
+
+        private bool ContieneFiltro(TItem elemento, string filtro)
+        {
+            if (elemento == null || string.IsNullOrEmpty(filtro))
+                return true;
+
+            foreach (var columna in Columnas)
             {
-                if (!string.IsNullOrEmpty(RefreshEvent))
-                {
-                    await JSRuntime.InvokeVoidAsync("registerTableRefreshEvent", _dotNetObjectRef, RefreshEvent);
-                }
-                else
-                {
-                    await JSRuntime.InvokeVoidAsync("registerTableRefreshEvent", _dotNetObjectRef, "refreshTable");
-                }
+                var valor = ObtenerValorPropiedad(elemento, columna.Accesor)?.ToString();
+                if (valor != null && valor.Contains(filtro, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
+
+            return false;
         }
 
-        [JSInvokable]
-        public async Task RefreshTable()
+        private void CambiarFiltroGlobal(ChangeEventArgs e)
         {
-            await LoadData(true);
-            StateHasChanged();
-        }
+            FiltroGlobal = e.Value?.ToString() ?? "";
+            IndicePagina = 0;
 
-        private async Task LoadData(bool forceRefresh = false)
-        {
-            try
+            _temporizadorBusqueda?.Dispose();
+            _temporizadorBusqueda = new System.Threading.Timer(async _ =>
             {
-                Loading = true;
-                StateHasChanged();
-
-                var url = FetchUrl;
-                var queryString = new List<string>();
-
-                // Build query params
-                foreach (var param in QueryParams)
+                await InvokeAsync(() =>
                 {
-                    queryString.Add($"{param.Key}={param.Value}");
-                }
-
-                queryString.Add($"{PageKey}={PageIndex}");
-                queryString.Add($"{SizeKey}={PageSize}");
-
-                if (!string.IsNullOrEmpty(GlobalFilter))
-                {
-                    queryString.Add($"{FilterKey}={Uri.EscapeDataString(GlobalFilter)}");
-                }
-
-                if (!string.IsNullOrEmpty(SortQuery))
-                {
-                    queryString.Add($"{SortKey}={Uri.EscapeDataString(SortQuery)}");
-                }
-
-                if (queryString.Count > 0)
-                {
-                    url += (url.Contains("?") ? "&" : "?") + string.Join("&", queryString);
-                }
-
-                var response = await Http.GetFromJsonAsync<JsonElement>(url);
-
-                try
-                {
-                    // Extract data and total count from response
-                    if (response.TryGetProperty(ResponseDataKey, out var contentElement) &&
-                        response.TryGetProperty(ResponseTotalCount, out var totalElement))
-                    {
-                        Data = contentElement.Deserialize<List<TItem>>();
-                        TotalCount = totalElement.GetInt32();
-                    }
-                    else
-                    {
-                        Logger.LogError("Failed to extract data or total count from response");
-                        Error = true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error parsing response data");
-                    Error = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error loading data");
-                Error = true;
-            }
-            finally
-            {
-                Loading = false;
-                StateHasChanged();
-            }
-        }
-
-        private async Task CheckIfMobile()
-        {
-            IsMobile = await JSRuntime.InvokeAsync<bool>("window.innerWidth < 768");
-        }
-
-        private void HandleGlobalFilterChange(ChangeEventArgs e)
-        {
-            GlobalFilter = e.Value?.ToString() ?? "";
-            PageIndex = 0;
-
-            // Debounce the search
-            _debounceTimer?.Dispose();
-            _debounceTimer = new System.Threading.Timer(async _ =>
-            {
-                await InvokeAsync(async () =>
-                {
-                    await LoadData();
+                    FiltrarDatos();
                     StateHasChanged();
                 });
-            }, null, DebounceDelay, Timeout.Infinite);
+            }, null, RetardoBusqueda, Timeout.Infinite);
         }
 
-        private void ClearGlobalFilter()
+        private void LimpiarFiltroGlobal()
         {
-            GlobalFilter = "";
-            PageIndex = 0;
-            _ = LoadData();
+            FiltroGlobal = "";
+            IndicePagina = 0;
+            FiltrarDatos();
         }
 
-        private void ToggleRowExpansion(string rowId, TItem item)
+        private void FiltrarDatos()
         {
-            if (DisableRowExpand != null && DisableRowExpand(item))
+            ElementosFiltrados = Elementos.Where(e => string.IsNullOrEmpty(FiltroGlobal) || ContieneFiltro(e, FiltroGlobal)).ToList();
+            TotalElementos = ElementosFiltrados.Count;
+            AplicarPaginado();
+        }
+
+        private void AplicarPaginado()
+        {
+            int inicio = IndicePagina * TamanoPagina;
+            int fin = Math.Min(inicio + TamanoPagina, ElementosFiltrados.Count);
+
+            if (inicio >= ElementosFiltrados.Count && ElementosFiltrados.Count > 0)
+            {
+                IndicePagina = 0;
+                inicio = 0;
+                fin = Math.Min(TamanoPagina, ElementosFiltrados.Count);
+            }
+
+            ElementosPaginados = ElementosFiltrados.Skip(inicio).Take(TamanoPagina).ToList();
+        }
+
+
+        private void AlternarExpansionFila(string idFila, TItem item)
+        {
+            if (DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item)) return;
+
+            if (FilasExpandidas.ContainsKey(idFila))
+                FilasExpandidas[idFila] = !FilasExpandidas[idFila];
+            else
+                FilasExpandidas[idFila] = true;
+        }
+
+        private void SeleccionarFila(TItem item)
+        {
+            if (FilasSeleccionadas.Contains(item))
+                FilasSeleccionadas.Remove(item);
+            else
+                FilasSeleccionadas.Add(item);
+        }
+
+        private async Task EliminarElemento(TItem item)
+        {
+            await InvokeAsync(StateHasChanged); // Asegura renderizado si es necesario
+            PosicionSuperpuesta = await JS.InvokeAsync<Posicion>("obtenerPosicionElemento", "btnEliminarCliente");
+            DatosSuperpuestos = item;
+        }
+
+
+        private async Task ConfirmarEliminar()
+        {
+            if (DatosSuperpuestos != null)
+            {
+                await AlEliminar.InvokeAsync(DatosSuperpuestos);
+            }
+            DatosSuperpuestos = default;
+        }
+
+        private void CancelarEliminar()
+        {
+            DatosSuperpuestos = default;
+        }
+
+        private async Task CambiarEstado(TItem item)
+        {
+            if (string.IsNullOrEmpty(AccesorEstado) || !AlCambiarEstado.HasDelegate)
                 return;
 
-            if (ExpandedRows.ContainsKey(rowId))
+            var estadoActual = ObtenerValorPropiedad(item, AccesorEstado)?.ToString();
+            var nuevoEstado = estadoActual == "A" ? "I" : "A";
+
+            await AlCambiarEstado.InvokeAsync((item, nuevoEstado));
+        }
+
+
+        private async Task ConfirmarEliminarMasivo()
+        {
+            if (AlEliminarMasivo.HasDelegate && FilasSeleccionadas.Count > 0)
             {
-                ExpandedRows[rowId] = !ExpandedRows[rowId];
+                await AlEliminarMasivo.InvokeAsync(FilasSeleccionadas);
             }
-            else
+            FilasSeleccionadas.Clear();
+            MostrarConfirmacionEliminarMasivo = false;
+        }
+
+        private void IrPrimeraPagina()
+        {
+            if (IndicePagina > 0)
             {
-                ExpandedRows[rowId] = true;
-            }
-        }
-
-        private void HandleRowSelection(TItem item)
-        {
-            if (SelectedRows.Contains(item))
-            {
-                SelectedRows.Remove(item);
-            }
-            else
-            {
-                SelectedRows.Add(item);
-            }
-        }
-
-        private async Task HandleSort(string columnId, string direction)
-        {
-            ExpandedRows.Clear();
-            PageIndex = 0;
-            SortQuery = $"{columnId.Replace("_", ".")},{direction}";
-            await LoadData();
-        }
-
-        private async Task HandleDeleteClick(TItem item, MouseEventArgs e)
-        {
-            var boundingRect = await JSRuntime.InvokeAsync<DOMRect>("getBoundingClientRect", e);
-            OverlayData = item;
-            OverlayPosition = (boundingRect.Bottom + boundingRect.Height + 10, boundingRect.Left + boundingRect.Width / 2);
-        }
-
-        private async Task ConfirmDelete()
-        {
-            if (OverlayData != null)
-            {
-                await OnDeleteAction.InvokeAsync(OverlayData);
-                await LoadData(true);
-            }
-            OverlayData = default;
-        }
-
-        private void CancelDelete()
-        {
-            OverlayData = default;
-        }
-
-        private async Task HandleStatusToggle(TItem item)
-        {
-            if (string.IsNullOrEmpty(StatusAccessor) || !OnStatusChange.HasDelegate)
-                return;
-
-            var currentStatus = GetPropertyValue(item, StatusAccessor)?.ToString();
-            var newStatus = currentStatus == "A" ? "I" : "A";
-
-            // Call the status change callback
-            await OnStatusChange.InvokeAsync((item, newStatus));
-
-            // Update the local data
-            await LoadData(true);
-        }
-
-        private async Task ConfirmMassDelete()
-        {
-            if (OnDeleteMassiveAction.HasDelegate && SelectedRows.Count > 0)
-            {
-                await OnDeleteMassiveAction.InvokeAsync(SelectedRows);
-                await LoadData(true);
-            }
-            SelectedRows.Clear();
-            ShowMassDeleteConfirmation = false;
-        }
-
-        private void NavigateToFirstPage()
-        {
-            if (PageIndex > 0)
-            {
-                PageIndex = 0;
-                ExpandedRows.Clear();
-                _ = LoadData();
+                IndicePagina = 0;
+                AplicarPaginado();
             }
         }
 
-        private void NavigateToPrevPage()
+        private void IrPaginaAnterior()
         {
-            if (PageIndex > 0)
+            if (IndicePagina > 0)
             {
-                PageIndex--;
-                ExpandedRows.Clear();
-                _ = LoadData();
+                IndicePagina--;
+                AplicarPaginado();
             }
         }
 
-        private void NavigateToNextPage()
+        private void IrPaginaSiguiente()
         {
-            int totalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
-            if (PageIndex < totalPages - 1)
+            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            if (IndicePagina < totalPaginas - 1)
             {
-                PageIndex++;
-                ExpandedRows.Clear();
-                _ = LoadData();
+                IndicePagina++;
+                AplicarPaginado();
             }
         }
 
-        private void NavigateToPage(int page)
+        private void IrUltimaPagina()
         {
-            PageIndex = page;
-            ExpandedRows.Clear();
-            _ = LoadData();
-        }
-
-        private async Task HandlePageSizeChange(ChangeEventArgs e)
-        {
-            if (int.TryParse(e.Value?.ToString(), out int newSize))
+            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            if (IndicePagina < totalPaginas - 1)
             {
-                PageSize = newSize;
-                PageIndex = 0;
-                ExpandedRows.Clear();
-                await LoadData();
+                IndicePagina = totalPaginas - 1;
+                AplicarPaginado();
             }
         }
 
-        private int GetColumnCount()
+        private void IrPagina(int pagina)
         {
-            int count = Columns.Count;
-            if (RowExpand != null) count++;
-            if (OnSelectAction.HasDelegate || OnDeleteAction.HasDelegate) count++;
-            if (OnDeleteMassiveAction.HasDelegate) count++;
-            return count;
+            IndicePagina = pagina;
+            AplicarPaginado();
         }
 
-        private object GetPropertyValue(TItem item, string propertyName)
+        private List<int> ObtenerPaginasParaMostrar()
         {
-            if (item == null || string.IsNullOrEmpty(propertyName))
-                return null;
+            int totalPaginas = (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+            int maxPaginas = EsMovil ? 3 : PaginasAMostrar;
+            int inicio = Math.Max(0, IndicePagina - maxPaginas / 2);
+            int fin = Math.Min(totalPaginas - 1, inicio + maxPaginas - 1);
 
-            return item.GetType().GetProperty(propertyName)?.GetValue(item);
-        }
-
-        private object GetCellValue(TItem item, ColumnDefinition column)
-        {
-            if (column.Cell != null)
+            if (fin - inicio < maxPaginas - 1)
             {
-                return column.Cell(item);
+                inicio = Math.Max(0, fin - maxPaginas + 1);
             }
 
-            return GetPropertyValue(item, column.Accessor);
+            return Enumerable.Range(inicio, fin - inicio + 1).ToList();
+        }
+
+        private async Task CambiarTamanoPagina(ChangeEventArgs e)
+        {
+            if (int.TryParse(e.Value?.ToString(), out int nuevoTamano))
+            {
+                TamanoPagina = nuevoTamano;
+                IndicePagina = 0;
+                AplicarPaginado();
+            }
+        }
+
+        private int ObtenerCantidadColumnas()
+        {
+            int cantidad = Columnas.Count;
+            if (FilaExpandida != null) cantidad++;
+            if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate) cantidad++;
+            return cantidad;
+        }
+
+        private object ObtenerValorPropiedad(object objeto, string propiedad)
+        {
+            return objeto?.GetType().GetProperty(propiedad)?.GetValue(objeto);
+        }
+
+
+        private object ObtenerValorCelda(TItem item, DefinicionColumna column)
+        {
+            if (column.Celda != null)
+            {
+                return column.Celda(item);
+            }
+
+            return ObtenerValorPropiedad(item, column.Accesor);
+        }
+
+        private int GetTotalPages()
+        {
+            return (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
+        }
+
+        private int GetFirstItemIndex()
+        {
+            return TotalElementos == 0 ? 0 : IndicePagina * TamanoPagina + 1;
+        }
+
+        private int GetLastItemIndex()
+        {
+            return Math.Min((IndicePagina + 1) * TamanoPagina, TotalElementos);
         }
 
     }
+
 }

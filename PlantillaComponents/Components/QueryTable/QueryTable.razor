@@ -8,33 +8,34 @@
 @using System.Linq.Expressions
 @using System.Net.Http.Json
 @using Microsoft.Extensions.Logging
+@using PlantillaComponents.Components.Toggle
+@inject IJSRuntime JS
 @inject HttpClient Http
-@inject IJSRuntime JSRuntime
 @inject ILogger<QueryTable<TItem>> Logger
 
 @typeparam TItem where TItem : class
 
-<div class="flex flex-col @TableClassName">
+<div class="flex flex-col @ClaseTabla">
     <!-- Header with search and add button -->
     <div class="flex flex-wrap justify-between items-center mb-4 px-4 py-2 bg-[var(--bg)] border-b border-[var(--border)] rounded-t-lg">
-        <p class="text-lg font-bold text-[var(--font)] break-words">@Title</p>
+        <p class="text-lg font-bold text-[var(--font)] break-words">@Titulo</p>
 
         <div class="flex items-center space-x-2 w-full sm:w-auto mt-2 sm:mt-0">
-            @if (Searchable)
+            @if (BusquedaHabilitada)
             {
                 <div class="relative flex items-center border border-[var(--border)] rounded bg-[var(--bg)] focus-within:ring focus-within:border-[var(--highlight)]">
                     <span class="px-3 text-[var(--placeholder)]">
                         <i class="fas fa-filter"></i>
                     </span>
-                    <input type="text" 
-                           value="@GlobalFilter" 
-                           @oninput="HandleGlobalFilterChange" 
-                           placeholder="@SearchPlaceholder" 
+                    <input type="text"
+                           value="@FiltroGlobal"
+                           @oninput="CambiarFiltroGlobal"
+                           placeholder="@PlaceholderBusqueda"
                            class="flex-1 p-2 bg-transparent text-[var(--font)] placeholder-[var(--placeholder)] focus:outline-none w-[25%]" />
-                    @if (!string.IsNullOrEmpty(GlobalFilter))
+                    @if (!string.IsNullOrEmpty(FiltroGlobal))
                     {
-                        <button type="button" 
-                                @onclick="ClearGlobalFilter" 
+                        <button type="button"
+                                @onclick="LimpiarFiltroGlobal"
                                 class="absolute right-2 text-[var(--placeholder)] hover:text-[var(--font)] focus:outline-none">
                             <i class="fas fa-times"></i>
                         </button>
@@ -42,9 +43,9 @@
                 </div>
             }
 
-            @if (OnNewAction.HasDelegate)
+            @if (AlNuevo.HasDelegate)
             {
-                <button type="button" @onclick="OnNewAction" class="p-3 bg-[var(--info)] text-white rounded hover:bg-blue-400">
+                <button type="button" @onclick="AlNuevo" class="p-3 bg-[var(--info)] text-white rounded hover:bg-blue-400">
                     <i class="fas fa-plus"></i>
                 </button>
             }
@@ -56,44 +57,38 @@
         <table class="min-w-full bg-[var(--bg)] text-[var(--font)] text-left">
             <thead class="border-b bg-[var(--secondaryalt)] text-[var(--font)]">
                 <tr>
-                    @if (RowExpand != null)
+                    @if (FilaExpandida != null)
                     {
                         <th class="px-4 py-4 text-sm font-medium border-[var(--border)]"></th>
                     }
-                    @if (OnDeleteMassiveAction.HasDelegate)
+                    @if (AlEliminarMasivo.HasDelegate)
                     {
                         <th class="px-4 py-3 text-sm font-semibold border-[var(--border)] whitespace-nowrap w-[1%]">
                             <div class="flex">
-                                <button type="button" 
-                                        @onclick="() => ShowMassDeleteConfirmation = true" 
-                                        class="p-1 rounded-md text-[var(--error)] hover:text-red-600 @(SelectedRows.Count == 0 ? "opacity-50 cursor-not-allowed" : "")" 
-                                        title="Eliminar seleccionados" 
-                                        disabled="@(SelectedRows.Count == 0)">
+                                <button type="button"
+                                        @onclick="() => MostrarConfirmacionEliminarMasivo = true"
+                                        class="p-1 rounded-md text-[var(--error)] hover:text-red-600 @(FilasSeleccionadas.Count == 0 ? "opacity-50 cursor-not-allowed" : "")"
+                                        title="Eliminar seleccionados"
+                                        disabled="@(FilasSeleccionadas.Count == 0)">
                                     <i class="fas fa-trash-alt text-lg"></i>
                                 </button>
                             </div>
                         </th>
                     }
-                    @if (OnSelectAction.HasDelegate || OnDeleteAction.HasDelegate)
+                    @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate)
                     {
                         <th class="px-4 py-3 text-sm font-semibold border-[var(--border)] whitespace-nowrap w-[10%]">
                             <div class="flex items-center justify-center">Acciones</div>
                         </th>
                     }
-                    @foreach (var column in Columns)
+                    @foreach (var column in Columnas)
                     {
-                        <th class="px-4 py-3 text-sm font-semibold border-[var(--border)] whitespace-nowrap @(column.ClassName ?? "")">
+                        <th class="px-4 py-3 text-sm font-semibold border-[var(--border)] whitespace-nowrap @(column.ClaseCss ?? "")">
                             <div class="group flex justify-center items-center space-x-2">
-                                @column.Header
-                                @if (Sortable && column.EnableSorting != false)
+                                @column.Encabezado
+                                @if (Ordenable && column.PermitirOrdenamiento != false)
                                 {
-                                    <div class="flex flex-col">
-                                        <i class="fas fa-chevron-up cursor-pointer text-xs ml-2 text-[var(--font)] hover:text-[var(--disabled)]"
-                                           @onclick='() => HandleSort(column.Accessor, "asc")'></i>
-                                        <i class="fas fa-chevron-down -mt-[3px] cursor-pointer text-xs ml-2 text-[var(--font)] hover:text-[var(--disabled)]"
-                                           @onclick='() => HandleSort(column.Accessor, "desc")'></i>
-                                    </div>
-
+                                    <!-- Sorting controls can be added here if needed -->
                                 }
                             </div>
                         </th>
@@ -101,115 +96,117 @@
                 </tr>
             </thead>
             <tbody>
-                @if (Error)
+                @if (HayError)
                 {
                     <tr class="border-b border-[var(--border)]">
-                        <td colspan="@GetColumnCount()" class="text-center py-4 text-[var(--error)] font-medium">
+                        <td colspan="@ObtenerCantidadColumnas()" class="text-center py-4 text-[var(--error)] font-medium">
                             Ocurrió un error al obtener la data.
                         </td>
                     </tr>
                 }
-                else if (Loading)
+                else if (Cargando)
                 {
                     <tr class="border-b border-[var(--border)]">
-                        <td colspan="@GetColumnCount()" class="text-center py-4">
+                        <td colspan="@ObtenerCantidadColumnas()" class="text-center py-4">
                             <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[var(--secondary)]"></div>
                         </td>
                     </tr>
                 }
-                else if (Data == null || Data.Count == 0)
+                else if (ElementosPaginados == null || ElementosPaginados.Count == 0)
                 {
                     <tr class="border-b border-[var(--border)]">
-                        <td colspan="@GetColumnCount()" class="text-center py-4 text-[var(--font)] font-medium">
-                            @NotFoundLabel
+                        <td colspan="@ObtenerCantidadColumnas()" class="text-center py-4 text-[var(--font)] font-medium">
+                            @EtiquetaNoEncontrado
                         </td>
                     </tr>
                 }
                 else
                 {
-                    @foreach (var item in Data)
+                    @foreach (var item in ElementosPaginados)
                     {
                         var rowId = item.GetHashCode().ToString();
                         <tr class="border-b border-[var(--border)] text-center hover:bg-[var(--secondaryalthover)] transition duration-200">
-                            @if (RowExpand != null)
+                            @if (FilaExpandida != null)
                             {
                                 <td class="whitespace-nowrap px-2 py-4 text-sm font-light border-[var(--border)]">
-                                    <button type="button" 
-                                            @onclick="() => ToggleRowExpansion(rowId, item)" 
+                                    <button type="button"
+                                            @onclick="() => AlternarExpansionFila(rowId, item)"
                                             class="focus:outline-none transition-transform duration-300 flex items-center justify-center
-                                                @(DisableRowExpand != null && DisableRowExpand(item) 
-                                                    ? "cursor-not-allowed text-[var(--disabled)] opacity-50" 
-                                                    : "cursor-pointer hover:text-[var(--hover)]")" 
-                                            disabled="@(DisableRowExpand != null && DisableRowExpand(item))">
-                                        <span class="inline-block transition-transform duration-300 @(ExpandedRows.ContainsKey(rowId) && ExpandedRows[rowId] ? "rotate-90" : "rotate-0")">
+                                                @(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item)
+                                                    ? "cursor-not-allowed text-[var(--disabled)] opacity-50"
+                                                    : "cursor-pointer hover:text-[var(--hover)]")"
+                                            disabled="@(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item))">
+                                        <span class="inline-block transition-transform duration-300 @(FilasExpandidas.ContainsKey(rowId) && FilasExpandidas[rowId] ? "rotate-90" : "rotate-0")">
                                             <i class="fas fa-chevron-right"></i>
                                         </span>
                                     </button>
                                 </td>
                             }
-                            @if (OnDeleteMassiveAction.HasDelegate)
+                            @if (AlEliminarMasivo.HasDelegate)
                             {
                                 <td class="px-6 py-4 text-sm font-light border-[var(--border)] whitespace-nowrap w-[1%]">
-                                    <input type="checkbox" 
-                                           class="accent-border-dark" 
-                                           checked="@(SelectedRows.Contains(item))" 
-                                           @onchange="() => HandleRowSelection(item)" />
+                                    <input type="checkbox"
+                                           class="accent-border-dark"
+                                           checked="@(FilasSeleccionadas.Contains(item))"
+                                           @onchange="() => SeleccionarFila(item)" />
                                 </td>
                             }
-                            @if (OnSelectAction.HasDelegate || OnDeleteAction.HasDelegate)
+                            @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate)
                             {
                                 <td class="px-6 py-4 text-sm font-light border-[var(--border)] whitespace-nowrap w-[10%]">
                                     <div class="flex items-center justify-center space-x-2 relative">
-                                        @if (OnSelectAction.HasDelegate)
+                                        @if (AlSeleccionar.HasDelegate)
                                         {
-                                            <button type="button" 
-                                                    @onclick="() => OnSelectAction.InvokeAsync(item)" 
-                                                    class="text-blue-500 hover:text-[var(--info)]" 
+                                            <button type="button"
+                                                    @onclick="() => AlSeleccionar.InvokeAsync(item)"
+                                                    class="text-blue-500 hover:text-[var(--info)]"
                                                     title="Editar">
                                                 <i class="fas fa-edit text-lg"></i>
                                             </button>
                                         }
-                                        @if (OnDeleteAction.HasDelegate)
+                                        @if (AlEliminar.HasDelegate)
                                         {
-                                            <button type="button" 
-                                                    @onclick="(e) => HandleDeleteClick(item, e)" 
-                                                    class="text-red-500 hover:text-[var(--error)]" 
+                                            <button type="button"
+                                                    id="btnEliminarCliente"
+                                                    @onclick="@(() => EliminarElemento(item))"
+                                                    class="text-red-500 hover:text-[var(--error)]"
                                                     title="Eliminar">
                                                 <i class="fas fa-trash-alt text-lg"></i>
                                             </button>
                                         }
+
                                     </div>
                                 </td>
                             }
-                            @foreach (var column in Columns)
+                            @foreach (var column in Columnas)
                             {
-                                var whitespaceClass = column.ClassName?.Contains("whitespace-normal") == true ? "" : "whitespace-nowrap";
-                                
-                                @if (StatusAccessor != null && column.Accessor == StatusAccessor)
+                                var whitespaceClass = column.ClaseCss?.Contains("whitespace-normal") == true ? "" : "whitespace-nowrap";
+
+                                @if (AccesorEstado != null && column.Accesor == AccesorEstado)
                                 {
-                                    var status = GetPropertyValue(item, StatusAccessor)?.ToString();
-                                    
-                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClassName ?? "")">
+                                    var status = ObtenerValorPropiedad(item, AccesorEstado)?.ToString();
+
+                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
                                         <div class="flex items-center justify-center">
-                                            <Toggle IsActive="@(status == "A")" OnToggle="() => HandleStatusToggle(item)" />
+                                            <Toggle IsActive="@(status == "A")" OnToggle="() => CambiarEstado(item)" />
                                         </div>
                                     </td>
                                 }
                                 else
                                 {
-                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClassName ?? "")">
-                                        @GetCellValue(item, column)
+                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
+                                        @ObtenerValorCelda(item, column)
                                     </td>
                                 }
                             }
                         </tr>
-                        @if (RowExpand != null && ExpandedRows.ContainsKey(rowId) && ExpandedRows[rowId])
+                        @if (FilaExpandida != null && FilasExpandidas.ContainsKey(rowId) && FilasExpandidas[rowId])
                         {
                             <tr class="border-b">
-                                <td colspan="@GetColumnCount()" class="p-4 text-left bg-[var(--bg)] relative">
+                                <td colspan="@ObtenerCantidadColumnas()" class="p-4 text-left bg-[var(--bg)] relative">
                                     <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-[var(--border)]"></div>
                                     <div class="ml-8">
-                                        @RowExpand(item)
+                                        @FilaExpandida(item)
                                     </div>
                                 </td>
                             </tr>
@@ -221,65 +218,59 @@
     </div>
 
     <!-- Pagination -->
-    @if (ShowOptions)
+    @if (MostrarOpciones && TotalElementos > 0)
     {
-        <div class="flex justify-center items-center mt-4 space-x-2 flex-wrap">
+        <div class="flex justify-center text-[var(--font)] items-center mt-4 space-x-2 flex-wrap">
             <!-- Records info -->
             <div class="flex items-center space-x-2 py-2">
                 <span class="text-[var(--font)] text-sm text-center md:text-left align-middle">
-                    Mostrando del registro @(TotalCount == 0 ? 0 : PageIndex * PageSize + 1) al 
-                    @(Math.Min((PageIndex + 1) * PageSize, TotalCount)) de @TotalCount
+                    Mostrando del registro @GetFirstItemIndex() al @GetLastItemIndex() de @TotalElementos
                 </span>
             </div>
-            <div>
-                <button type="button" 
-                        @onclick="NavigateToFirstPage" 
-                        disabled="@(PageIndex == 0)" 
+
+            <div class="flex gap-2 flex-wrap">
+
+                <button type="button"
+                        @onclick="IrPrimeraPagina"
+                        disabled="@(IndicePagina == 0)"
                         class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-angle-double-left text-[var(--font)]"></i>
                 </button>
-                <button type="button" 
-                        @onclick="NavigateToPrevPage" 
-                        disabled="@(PageIndex == 0)" 
+                <button type="button"
+                        @onclick="IrPaginaAnterior"
+                        disabled="@(IndicePagina == 0)"
                         class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-angle-left text-[var(--font)]"></i>
                 </button>
-                @{
-                    int totalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
-                    int maxPagesToShow = IsMobile ? 3 : PagesToShow;
-                    int startPage = Math.Max(0, PageIndex - maxPagesToShow / 2);
-                    int endPage = Math.Min(totalPages - 1, startPage + maxPagesToShow - 1);
-                    
-                    if (endPage - startPage < maxPagesToShow - 1)
-                    {
-                        startPage = Math.Max(0, endPage - maxPagesToShow + 1);
-                    }
-                }
-                
-                @for (int page = startPage; page <= endPage; page++)
+
+                @foreach (var page in ObtenerPaginasParaMostrar())
                 {
                     var currentPage = page;
-                    <button type="button" 
-                            @onclick="() => NavigateToPage(currentPage)" 
-                            class="px-3 py-1 rounded-md text-[var(--font)] @(currentPage == PageIndex ? "bg-[var(--secondaryalt)]" : "bg-[var(--bg)] hover:bg-[var(--disabled)]")">
+                    <button type="button"
+                            @onclick="() => IrPagina(currentPage)"
+                            class="px-3 py-1 rounded-md text-[var(--font)] @(currentPage == IndicePagina ? "bg-[var(--secondaryalt)]" : "bg-[var(--bg)] hover:bg-[var(--disabled)]")">
                         @(currentPage + 1)
                     </button>
                 }
-                <button type="button" 
-                        @onclick="NavigateToNextPage" 
-                        disabled="@(PageIndex == totalPages - 1)" 
+
+                <button type="button"
+                        @onclick="IrPaginaSiguiente"
+                        disabled="@(IndicePagina >= GetTotalPages() - 1)"
                         class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-angle-right text-[var(--font)]"></i>
                 </button>
-                <button type="button" 
-                        @onclick="() => NavigateToPage(totalPages - 1)" 
-                        disabled="@(PageIndex == totalPages - 1)" 
+
+                <button type="button"
+                        @onclick="IrUltimaPagina"
+                        disabled="@(IndicePagina >= GetTotalPages() - 1)"
                         class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-angle-double-right text-[var(--font)]"></i>
                 </button>
+
             </div>
-            <select value="@PageSize" 
-                    @onchange="HandlePageSizeChange" 
+
+            <select value="@TamanoPagina"
+                    @onchange="CambiarTamanoPagina"
                     class="ml-2 p-2 bg-[var(--secondaryalt)] text-[var(--font)] rounded md:mt-0 mt-3">
                 <option value="5" class="hover:bg-[var(--secondaryalthover)]">Mostrar 5</option>
                 <option value="10" class="hover:bg-[var(--secondaryalthover)]">Mostrar 10</option>
@@ -288,28 +279,29 @@
         </div>
     }
 
-    <!-- Delete confirmation overlay -->
-    @if (OverlayData != null)
+    <!--Modal confirmar Eliminar-->
+    @if (DatosSuperpuestos != null && PosicionSuperpuesta != null)
     {
         <div class="fixed z-50 bg-[var(--bg)] border border-[var(--border)] rounded shadow-lg p-4"
-             style="top: @(OverlayPosition.Top)px; left: @(OverlayPosition.Left)px; transform: translateX(-50%);">
+             style="top: @(PosicionSuperpuesta.Top)px; left: @(PosicionSuperpuesta.Left)px; transform: translateX(-50%);">
             <div class="flex items-center space-x-2">
                 <i class="fas fa-exclamation-triangle text-[var(--error)] text-xl"></i>
                 <p class="text-sm text-[var(--font)]">¿Estás seguro de eliminar este elemento?</p>
             </div>
             <div class="flex justify-end space-x-4 mt-4">
-                <button type="button" @onclick="ConfirmDelete" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                <button type="button" @onclick="ConfirmarEliminar" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                     Sí
                 </button>
-                <button type="button" @onclick="CancelDelete" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
+                <button type="button" @onclick="CancelarEliminar" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
                     No
                 </button>
             </div>
         </div>
     }
 
+
     <!-- Mass delete confirmation modal -->
-    @if (ShowMassDeleteConfirmation)
+    @if (MostrarConfirmacionEliminarMasivo)
     {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-lg p-6 w-[90%] sm:w-[400px] max-w-full">
@@ -319,10 +311,10 @@
                 </div>
 
                 <div class="flex flex-wrap justify-end space-x-2 sm:space-x-4 mt-6">
-                    <button type="button" @onclick="ConfirmMassDelete" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                    <button type="button" @onclick="ConfirmarEliminarMasivo" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                         Sí
                     </button>
-                    <button type="button" @onclick="() => ShowMassDeleteConfirmation = false" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
+                    <button type="button" @onclick="() => MostrarConfirmacionEliminarMasivo = false" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
                         No
                     </button>
                 </div>
