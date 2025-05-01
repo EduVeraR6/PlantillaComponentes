@@ -55,34 +55,46 @@
         Columnas="@definicionColumnas">
 
             <FilaExpandida Context="cliente">
-                <div class="p-4 bg-gray-100 rounded">
-                    <strong>Datos adicionales:</strong>
-                    <p>Hola</p>
-                </div>
+                <QueryTable TItem="Cliente"
+                Elementos="@clientes"
+                Titulo="Lista de Clientes Hijos"
+                MostrarOpciones="true"
+                Ordenable="true"
+                BusquedaHabilitada="true"
+                AccesorEstado="Estado"
+                AlCambiarEstado="CambiarEstadoCliente"
+                AlSeleccionar="SeleccionarCliente"
+                AlEliminar="EliminarCliente"
+                AlNuevo="NuevoCliente"
+                AlEliminarMasivo="EliminarVariosClientes"
+                Columnas="definicionColumnas">
+                </QueryTable>
             </FilaExpandida>
 
-
         </QueryTable>
 
     </div>
 
-    <div class="mx-6 mt-6 px-6">
-        <QueryTable TItem="Cliente"
-        Elementos="@clientes"
-        Titulo="Lista de Clientes"
-        MostrarOpciones="true"
-        Ordenable="true"
-        BusquedaHabilitada="true"
-        AccesorEstado="Estado"
-        AlCambiarEstado="CambiarEstadoCliente"
-        AlSeleccionar="SeleccionarCliente"
-        AlEliminar="EliminarCliente"
-        AlNuevo="NuevoCliente"
-        AlEliminarMasivo="EliminarVariosClientes"
-        Columnas="definicionColumnas">
-        </QueryTable>
+
+
+    <!--    <div class="mx-6 mt-6 px-6">
+    <QueryTable TItem="Cliente"
+    Elementos="@clientes"
+    Titulo="Lista de Clientes"
+    MostrarOpciones="true"
+    Ordenable="true"
+    BusquedaHabilitada="true"
+    AccesorEstado="Estado"
+    AlCambiarEstado="CambiarEstadoCliente"
+    AlSeleccionar="SeleccionarCliente"
+    AlEliminar="EliminarCliente"
+    AlNuevo="NuevoCliente"
+    AlEliminarMasivo="EliminarVariosClientes"
+    Columnas="definicionColumnas">
+    </QueryTable>
 
     </div>
+    -->
 
 
 
@@ -130,7 +142,7 @@
                 Plantilla = c => c.Nombre,
                 ClaseCss = "text-left",
                 PermitirOrdenamiento = true,
-                Editable = true,
+                Editable = false,
                 Requerido = true,
                 PatronRegex = @"^[a-zA-Z\sáéíóúÁÉÍÓÚñÑ]+$",
                 MensajeError = "El nombre solo puede contener letras y espacios.",
@@ -310,7 +322,8 @@
     {
         foreach (var cliente in seleccionados)
         {
-
+            Console.WriteLine($"Cliente eliminado {cliente.Nombre}");
+            clientes.Remove(cliente);
         }
     }
 
@@ -323,11 +336,14 @@
     private void HandleSelectAction(Cliente cliente)
     {
         // Lógica para editar un cliente
-        Console.WriteLine($"Editar cliente {cliente.Nombre}");
+        Console.WriteLine($"Editar cliente {cliente.Nombre} Editar");
     }
 
     private void HandleDeleteAction(Cliente cliente)
     {
+
+        clientes.Remove(cliente);
+
         // Lógica para eliminar un cliente
         Console.WriteLine($"Eliminar cliente {cliente.Nombre}");
     }

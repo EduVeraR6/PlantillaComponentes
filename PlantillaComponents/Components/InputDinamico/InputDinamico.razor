@@ -1,0 +1,60 @@
+﻿@typeparam TItem
+
+@using System.Reflection
+
+    @switch (TipoInput?.ToLower())
+{
+    case "select":
+        if (OpcionesSelect != null)
+        {
+            <select value="@ValorActual"
+                    @onchange="e => ActualizarValorLocal(e.Value?.ToString())"
+                    class="w-full border-solid border-1 focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")">
+                @foreach (var opcion in OpcionesSelect)
+                {
+                    <option value="@opcion.Value">@opcion.Text</option>
+                }
+            </select>
+        }
+        break;
+    case "number":
+        <input type="number"
+               value="@ValorActual"
+               @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
+               class="w-full border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")"
+               min="@Min"
+               max="@Max"
+               step="@Step" />
+        break;
+    case "date":
+        <input type="date"
+               value="@ValorFechaFormateado"
+               @onchange="e => ActualizarValorLocal(e.Value?.ToString())"
+               class="w-full border-solid border-1 focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")" />
+        break;
+    case "checkbox":
+        <input type="checkbox"
+               checked="@(ValorActual == "true")"
+               @onchange="e => ActualizarValorLocal(((bool)e.Value).ToString())"
+               class="border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 accent-[var(--info)]" />
+        break;
+    case "textarea":
+        <textarea value="@ValorActual"
+                  @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
+                  class="w-full border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")"
+                  rows="3">
+                                    </textarea>
+        break;
+    default:
+        <input type="text"
+               value="@ValorActual"
+               @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
+               class="border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 w-full bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")" />
+        break;
+}
+@if (TieneError)
+{
+    <div class="text-xs text-red-500 mt-1">
+        @MensajeError
+    </div>
+}

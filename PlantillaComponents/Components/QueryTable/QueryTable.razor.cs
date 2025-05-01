@@ -16,15 +16,6 @@ namespace PlantillaComponents.Components.QueryTable
     public partial class QueryTable<TItem> : ComponentBase where TItem : class
     {
       
-
-
-        public class Posicion
-        {
-            public int Top { get; set; }
-            public int Left { get; set; }
-        }
-
-
         [Parameter] public List<DefinicionColumna<TItem>> Columnas { get; set; } = new();
         [Parameter] public List<TItem> Elementos { get; set; } = new();
         [Parameter] public string Titulo { get; set; }
@@ -72,9 +63,12 @@ namespace PlantillaComponents.Components.QueryTable
         private List<TItem> ElementosFiltrados { get; set; } = new();
         private List<TItem> ElementosPaginados { get; set; } = new();
         private Dictionary<string, bool> FilaEnEdicion { get; set; } = new();
+
         private string columnaOrdenada;
+
         private bool ordenAscendente = true;
 
+        private Dictionary<string, Dictionary<string, string>> ValoresTemporales = new Dictionary<string, Dictionary<string, string>>();
         private Dictionary<string, Dictionary<string, string>> ErroresValidacion = new Dictionary<string, Dictionary<string, string>>();
 
         protected override async Task OnInitializedAsync()
@@ -348,7 +342,7 @@ namespace PlantillaComponents.Components.QueryTable
             return Math.Min((IndicePagina + 1) * TamanoPagina, TotalElementos);
         }
 
-        // Lógica de edición en fila de la tabla
+        // LOGICA EDICION FILA 
         private void AlternarEdicionFila(string idFila, TItem item)
         {
             if (FilaEnEdicion.ContainsKey(idFila))
@@ -358,11 +352,6 @@ namespace PlantillaComponents.Components.QueryTable
             else
             {
                 FilaEnEdicion[idFila] = true;
-            }
-
-            if (FilaEnEdicion[idFila])
-            {
-                AlSeleccionar.InvokeAsync(item);
             }
         }
 
@@ -406,6 +395,7 @@ namespace PlantillaComponents.Components.QueryTable
                             ErroresValidacion[rowId] = new Dictionary<string, string>();
 
                         ErroresValidacion[rowId][propertyName] = column.MensajeError ?? "Formato inválido";
+                        Console.WriteLine(ErroresValidacion[rowId][propertyName]);
                         return;
                     }
                 }
@@ -477,8 +467,86 @@ namespace PlantillaComponents.Components.QueryTable
             }
         }
 
+        private void RegistrarCambioInput(TItem item, string accesor, string valor)
+        {
+            var rowId = item.GetHashCode().ToString();
+
+            if (!ValoresTemporales.ContainsKey(rowId))
+            {
+                ValoresTemporales[rowId] = new Dictionary<string, string>();
+            }
+
+            ValoresTemporales[rowId][accesor] = valor;
+        }
+
+        private void ValidarYGuardarCambios(TItem item)
+        {
+            var rowId = item.GetHashCode().ToString();
+
+            if (!ValoresTemporales.ContainsKey(rowId) || !ValoresTemporales[rowId].Any())
+            {
+                FilaEnEdicion[rowId] = false;
+                return;
+            }
+
+            if (ErroresValidacion.ContainsKey(rowId))
+            {
+                ErroresValidacion[rowId].Clear();
+            }
+
+            bool esValido = true;
+
+            foreach (var entrada in ValoresTemporales[rowId])
+            {
+                var accesor = entrada.Key;
+                var valor = entrada.Value;
+                var column = Columnas.FirstOrDefault(c => c.Accesor == accesor);
+
+                if (column?.Requerido == true && string.IsNullOrWhiteSpace(valor))
+                {
+                    if (!ErroresValidacion.ContainsKey(rowId))
+                        ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                    ErroresValidacion[rowId][accesor] = "Este campo es requerido";
+                    Console.WriteLine("Este campo es requerido");
+                    esValido = false;
+                    continue;
+                }
+
+                // Validar con Regex si está configurado
+                if (!string.IsNullOrEmpty(column?.PatronRegex) && !string.IsNullOrEmpty(valor))
+                {
+                    var regex = new Regex(column.PatronRegex);
+                    if (!regex.IsMatch(valor))
+                    {
+                        if (!ErroresValidacion.ContainsKey(rowId))
+                            ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                        ErroresValidacion[rowId][accesor] = column.MensajeError ?? "Formato inválido";
+                        Console.WriteLine("Formato inválido");
+                        esValido = false;
+                        continue;
+                    }
+                }
+            }
+
+            if (esValido)
+            {
+                foreach (var entrada in ValoresTemporales[rowId])
+                {
+                    AsignarValorPropiedad(item, entrada.Key, entrada.Value);
+                }
+
+                ValoresTemporales.Remove(rowId);
+                GuardarCambios(item, rowId);
+            }
+
+            StateHasChanged();
+        }
+
         private void GuardarCambios(TItem item, string idFila)
         {
+            AlSeleccionar.InvokeAsync(item);
             FilaEnEdicion[idFila] = false;
         }
 
@@ -500,6 +568,9 @@ namespace PlantillaComponents.Components.QueryTable
             if (ErroresValidacion.TryGetValue(claveItem, out var erroresPropiedad) &&
                 erroresPropiedad.TryGetValue(propiedad, out var mensaje))
             {
+
+                Console.WriteLine(mensaje);
+
                 return mensaje;
             }
             return string.Empty;
@@ -516,22 +587,20 @@ namespace PlantillaComponents.Components.QueryTable
             throw new InvalidOperationException("El tipo no contiene una propiedad 'Id'.");
         }
 
-        // Ordenar columnas de la tabla
+
+        //ORDERNAR COLUMNAS ASC DESC
         private void OrdenarColumna(string accesor)
         {
             if (columnaOrdenada == accesor)
             {
-                // Si ya está ordenado por esta columna, cambia la dirección
                 ordenAscendente = !ordenAscendente;
             }
             else
             {
-                // Si es una nueva columna, por defecto ordenamos ascendentemente
                 columnaOrdenada = accesor;
                 ordenAscendente = true;
             }
 
-            // Ordenar los datos
             OrdenarDatos();
         }
 

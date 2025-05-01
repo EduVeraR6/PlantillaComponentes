@@ -9,6 +9,7 @@
 @using System.Net.Http.Json
 @using Microsoft.Extensions.Logging
 @using System.Text.RegularExpressions
+@using PlantillaComponents.Components.InputDinamico
 @using PlantillaComponents.Components.Toggle
 @inject IJSRuntime JS
 @inject HttpClient Http
@@ -131,7 +132,7 @@
                         <tr class="border-b border-[var(--border)] text-center hover:bg-[var(--secondaryalthover)] transition duration-200">
                             @if (FilaExpandida != null)
                             {
-                                <td class="whitespace-nowrap px-2 py-4 text-sm font-light border-[var(--border)]">
+                                <td class="whitespace-nowrap  px-2 py-4 text-sm font-light border-[var(--border)]">
                                     <button type="button"
                                             @onclick="() => AlternarExpansionFila(rowId, item)"
                                             class="focus:outline-none transition-transform duration-300 flex items-center justify-center
@@ -162,7 +163,7 @@
                                         @if (FilaEnEdicion.ContainsKey(rowId) && FilaEnEdicion[rowId])
                                         {
                                             <button class="text-blue-500 hover:text-[var(--info)]" title="Guardar"
-                                                    @onclick="@(() => GuardarCambios(item, rowId))">
+                                                    @onclick="@(() => ValidarYGuardarCambios(item))">
                                                 <i class="fa-solid fa-floppy-disk text-lg"></i>
                                             </button>
                                             <button class="text-red-500 hover:text-[var(--error)]" title="Cancelar"
@@ -222,64 +223,22 @@
                                             }
                                             else
                                             {
+
+
                                                 <div class="relative">
-                                                    @switch (column.TipoInput?.ToLower())
-                                                    {
-                                                        case "select":
-                                                            if (column.OpcionesSelect != null)
-                                                            {
-                                                                <select value="@ObtenerValorPropiedad(item, column.Accesor)?.ToString()"
-                                                                        @onchange="e => AsignarValorPropiedad(item, column.Accesor, e.Value?.ToString())"
-                                                                        class="w-full bg-white text-black border rounded px-2 py-1 @(TieneErrorValidacion(item, column.Accesor) ? "border-red-500" : "")">
-                                                                    @foreach (var opcion in column.OpcionesSelect)
-                                                                    {
-                                                                        <option value="@opcion.Value">@opcion.Text</option>
-                                                                    }
-                                                                </select>
-                                                            }
-                                                            break;
-                                                        case "number":
-                                                            <input type="number"
-                                                                   value="@ObtenerValorPropiedad(item, column.Accesor)?.ToString()"
-                                                                   @oninput="e => AsignarValorPropiedad(item, column.Accesor, e.Value?.ToString())"
-                                                                   class="w-full bg-white text-black border rounded px-2 py-1 @(TieneErrorValidacion(item, column.Accesor) ? "border-red-500" : "")"
-                                                                   min="@column.Min"
-                                                                   max="@column.Max"
-                                                                   step="@column.Step" />
-                                                            break;
-                                                        case "date":
-                                                            <input type="date"
-                                                                   value="@ObtenerValorFechaFormateado(item, column.Accesor)"
-                                                                   @onchange="e => AsignarValorPropiedad(item, column.Accesor, e.Value?.ToString())"
-                                                                   class="w-full bg-white text-black border rounded px-2 py-1 @(TieneErrorValidacion(item, column.Accesor) ? "border-red-500" : "")" />
-                                                            break;
-                                                        case "checkbox":
-                                                            <input type="checkbox"
-                                                                   checked="@(ObtenerValorPropiedad(item, column.Accesor)?.ToString() == "true")"
-                                                                   @onchange="e => AsignarValorPropiedad(item, column.Accesor, ((bool)e.Value).ToString())"
-                                                                   class="accent-[var(--info)]" />
-                                                            break;
-                                                        case "textarea":
-                                                            <textarea value="@ObtenerValorPropiedad(item, column.Accesor)?.ToString()"
-                                                                      @oninput="e => AsignarValorPropiedad(item, column.Accesor, e.Value?.ToString())"
-                                                                      class="w-full bg-white text-black border rounded px-2 py-1 @(TieneErrorValidacion(item, column.Accesor) ? "border-red-500" : "")"
-                                                                      rows="3">
-                                                            </textarea>
-                                                            break;
-                                                        default:
-                                                            <input type="text"
-                                                                   value="@ObtenerValorPropiedad(item, column.Accesor)?.ToString()"
-                                                                   @oninput="e => AsignarValorPropiedad(item, column.Accesor, e.Value?.ToString())"
-                                                                   class="w-full bg-white text-black border rounded px-2 py-1 @(TieneErrorValidacion(item, column.Accesor) ? "border-red-500" : "")"/>
-                                                            break;
-                                                    }
-                                                    @if (TieneErrorValidacion(item, column.Accesor))
-                                                    {
-                                                        <div class="text-xs text-red-500 mt-1">
-                                                            @ObtenerMensajeError(item, column.Accesor)
-                                                        </div>
-                                                    }
+                                                    <InputDinamico TItem="TItem"
+                                                                   Item="item"
+                                                                   Accesor="@column.Accesor"
+                                                                   TipoInput="@column.TipoInput"
+                                                                   OpcionesSelect="@column.OpcionesSelect"
+                                                                   Min="@column.Min"
+                                                                   Max="@column.Max"
+                                                                   Step="@column.Step"
+                                                                   TieneError="@TieneErrorValidacion(item, column.Accesor)"
+                                                                   MensajeError="@ObtenerMensajeError(item, column.Accesor)"
+                                                                   OnInputChange="@((tuple) => RegistrarCambioInput(item, tuple.Accesor, tuple.Valor))" />
                                                 </div>
+
                                             }
                                         }
                                         else
@@ -372,19 +331,21 @@
     <!--Modal confirmar Eliminar-->
     @if (DatosSuperpuestos != null && PosicionSuperpuesta != null)
     {
-        <div class="fixed z-50 bg-[var(--bg)] border border-[var(--border)] rounded shadow-lg p-4"
-             style="top: @(PosicionSuperpuesta.Top)px; left: @(PosicionSuperpuesta.Left)px; transform: translateX(-50%);">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-exclamation-triangle text-[var(--error)] text-xl"></i>
-                <p class="text-sm text-[var(--font)]">¿Estás seguro de eliminar este elemento?</p>
-            </div>
-            <div class="flex justify-end space-x-4 mt-4">
-                <button type="button" @onclick="ConfirmarEliminar" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                    Sí
-                </button>
-                <button type="button" @onclick="CancelarEliminar" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
-                    No
-                </button>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-lg p-6 w-[90%] sm:w-[400px] max-w-full">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-exclamation-triangle text-[var(--error)] text-2xl"></i>
+                    <p class="text-md text-[var(--font)]">¿Estás seguro de eliminar el elemento seleccionado?</p>
+                </div>
+
+                <div class="flex flex-wrap justify-end space-x-2 sm:space-x-4 mt-6">
+                    <button type="button" @onclick="ConfirmarEliminar" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                        Sí
+                    </button>
+                    <button type="button" @onclick="CancelarEliminar" class="px-4 py-2 border border-[var(--border)] text-[var(--font)] rounded">
+                        No
+                    </button>
+                </div>
             </div>
         </div>
     }
