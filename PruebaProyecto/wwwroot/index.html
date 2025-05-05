@@ -15,21 +15,42 @@
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
 </head>
-
 <body class="h-full">
-    <div id="app">Loading...</div>
+
+    <!-- Spinner inicial -->
+    <div id="spinner" class="fixed inset-0 flex flex-col items-center justify-center bg-blue-500 bg-opacity-80 z-50">
+        <div class="flex flex-col items-center">
+            <span class="loader"></span>
+        </div>
+        <div class="fixed min-h-80 mt-16">
+            <p class="mt-4 text-gray-50 font-semibold ">Cargando...</p>
+        </div>
+    </div>
+
+    <!-- Contenedor de Blazor -->
+    <div id="app"></div>
+
     <script src="_framework/blazor.webassembly.js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js');</script>
-</body>
-</html>
-<script>
-    window.obtenerPosicionElemento = (idElemento) => {
-        const el = document.getElementById(idElemento);
-        if (!el) return null;
-        const rect = el.getBoundingClientRect();
-        return {
-            top: rect.top + window.scrollY,
-            left: rect.left + window.scrollX
+    <script>
+        // Usar un timeout para esperar a que Blazor se cargue completamente
+        setTimeout(() => {
+            document.getElementById("spinner").style.display = "none";
+        }, 1000);  // Esperar 1 segundo para que Blazor cargue
+
+        // Otros scripts
+        navigator.serviceWorker.register('service-worker.js');
+
+        window.obtenerPosicionElemento = (idElemento) => {
+            const el = document.getElementById(idElemento);
+            if (!el) return null;
+            const rect = el.getBoundingClientRect();
+            return {
+                top: rect.top + window.scrollY,
+                left: rect.left + window.scrollX
+            };
         };
-    };
-</script>
+    </script>
+</body>
+
+
+
