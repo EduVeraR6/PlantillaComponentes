@@ -1,18 +1,31 @@
-﻿@page "/counter"
+﻿@page "/"
+
+@using PruebaProyecto.Services
+
+@inject AuthService AuthService
+@inject TokenService TokenService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Counter</PageTitle>
 
-<h1>Counter</h1>
-
-<p role="status">Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="Login">Login</button>
+<button class="btn btn-primary" @onclick="Logout">Logout</button>
 
 @code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
+    private async Task Login()
     {
-        currentCount++;
+        string? token = await AuthService.Login();
+        await TokenService.SetTokenAsync(token);
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            NavigationManager.NavigateTo("/ubicaciones");
+        }
+
+    }
+
+    private async Task Logout()
+    {
+        await TokenService.ClearTokenAsync();
     }
 }

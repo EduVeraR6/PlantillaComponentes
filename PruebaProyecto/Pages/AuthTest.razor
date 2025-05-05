@@ -1,0 +1,203 @@
+﻿@page "/ubicaciones"
+
+@using PlantillaComponents.Components.QueryTable
+@using PlantillaComponents.Components.ThemeToggle
+@using PlantillaComponents.Models
+@using PruebaProyecto.Services
+@inject UbicacionesService UbicacionesService
+
+<PageTitle>Ubicaciones</PageTitle>
+ <ThemeToggle />
+
+
+
+
+@if (ubicaciones == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+
+    <div class="mx-6 mt-6 px-6">
+        <QueryTable TItem="Ubicacione"
+                    Titulo="Lista de Ubicaciones"
+                    Elementos="@ubicaciones"
+                    TamanoPagina="5"
+                    AlEliminarMasivo="EliminarSeleccionados"
+                    BusquedaHabilitada="true"
+                    Ordenable="true"
+                    AccesorEstado="Estado"
+                    EtiquetaNoEncontrado="No se encontraron ubicaciones"
+                    Cargando="@loading"
+                    AlSeleccionar="HandleSelectAction"
+                    AlEliminar="HandleDeleteAction"
+                    AlNuevo="HandleNewAction"
+                    AlCambiarEstado="HandleStatus"
+                    Columnas="@definicionColumnas">
+        </QueryTable>
+
+    </div>
+
+}
+
+
+@code {
+    private List<Ubicacione> ubicaciones = new List<Ubicacione>();
+    private bool loading = true;
+    private List<DefinicionColumna<Ubicacione>> definicionColumnas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ubicaciones = await UbicacionesService.ObtenerUbicaciones();
+
+
+        definicionColumnas = new List<DefinicionColumna<Ubicacione>>
+        {
+            new DefinicionColumna<Ubicacione>
+            {
+                Encabezado = "ID",
+                Registrar = false,
+                Accesor = "Id",
+                Plantilla = c => c.Id,
+                ClaseCss = "text-center",
+                PermitirOrdenamiento = true,
+                Editable = false,
+                Requerido = true,
+                PatronRegex = @"^\d+$",
+                MensajeError = "El ID debe ser un número entero.",
+                TipoInput = "number",
+                Min = "1",
+                Max = null,
+                Step = "1",
+                FormatoFecha = null,
+                FormatoNumero = "N0"
+            },
+            new DefinicionColumna<Ubicacione>
+            {
+                Encabezado = "Nombre",
+                Accesor = "Nombre",
+                Registrar = true,
+                Plantilla = c => c.Nombre,
+                ClaseCss = "text-center w-32", 
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = true,
+                PatronRegex = @"^[a-zA-Z\sáéíóúÁÉÍÓÚñÑ]+$",
+                MensajeError = "El nombre solo puede contener letras y espacios.",
+                TipoInput = "text",
+                FormatoNumero = null
+            },
+             new DefinicionColumna<Ubicacione>
+            {
+                Encabezado = "Estado",
+                Registrar = false,
+                Accesor = "Estado",
+                Plantilla = c => c.Estado,
+                ClaseCss = "text-center",
+                PermitirOrdenamiento = true,
+                Editable = true,
+                Requerido = false,
+                TipoInput = "select",
+                OpcionesSelect = new List<SelectOption>
+                {
+                    new SelectOption { Value = "A", Text = "Activo" },
+                    new SelectOption { Value = "I", Text = "Inactivo" }
+                }
+            }
+        };
+
+        loading = false;
+    }
+
+
+
+
+
+    private async Task EliminarSeleccionados(List<Ubicacione> seleccionados)
+    {
+        foreach (var ubicacion in seleccionados)
+        {
+        
+            ubicaciones.Remove(ubicacion);
+        }
+    }
+
+    private void HandleStatus((Ubicacione ubicacion, string status) datos)
+    {
+       
+    }
+
+
+    private void HandleSelectAction(Ubicacione ubicacion)
+    {
+        
+    }
+
+    private void HandleDeleteAction(Ubicacione ubicacion)
+    {
+
+        ubicaciones.Remove(ubicacion);
+
+   
+    }
+
+    private void HandleNewAction(Ubicacione ubicacion)
+    {
+        ubicacion.Estado = "A";
+
+        ubicaciones.Add(ubicacion);
+
+      
+    }
+
+
+
+    public partial class Ubicacione
+    {
+
+        public int Id { get; set; }
+
+
+        public string? Nombre { get; set; }
+
+
+        public string? Estado { get; set; }
+
+        public virtual ICollection<Sensore> Sensores { get; set; } = new List<Sensore>();
+    }
+
+    public partial class Sensore
+    {
+
+        public int Id { get; set; }
+
+        public int? UbicacionId { get; set; }
+
+
+        public string? Metrica { get; set; }
+
+        public string? Estado { get; set; }
+
+
+        public virtual ICollection<Lectura> Lecturas { get; set; } = new List<Lectura>();
+
+        public virtual Ubicacione? Ubicacion { get; set; }
+    }
+
+
+    public partial class Lectura
+    {
+
+        public int Id { get; set; }
+
+        public int? SensorId { get; set; }
+        public decimal? Valor { get; set; }
+
+        public string? Estado { get; set; }
+        public DateTime? Fecha { get; set; }
+        public virtual Sensore? Sensor { get; set; }
+    }
+
+
+}

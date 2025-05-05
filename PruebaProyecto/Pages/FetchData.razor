@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/Ejemplo"
 @using PlantillaComponents.Components.Button
 @using PlantillaComponents.Components.CardSelectableGroup
 @using PlantillaComponents.Components.CheckboxField
@@ -10,7 +10,13 @@
 @using PlantillaComponents.Components.ThemeToggle
 @using System.ComponentModel.DataAnnotations
 @using PlantillaComponents.Models
+@using PlantillaComponents.Services
+@using PlantillaComponents.Utils.Paginacion
+@using PruebaProyecto.Models.Age.AdminParametros.AgeIdiomas
 @using static PlantillaComponents.Components.DropDownField.DropDownField
+@inject PaginacionService PaginacionService
+
+
 
 <div class="h-full overflow-y-auto">
     <ThemeToggle />
@@ -187,9 +193,6 @@
                 }
             }
         };
-
-
-
         clientes = new List<Cliente>
             {
             new Cliente { Id = 1, Nombre = "Juan Pérez", Email = "juan@ejemplo.com", TipoCliente = "Regular", Estado = "A" },
@@ -212,7 +215,24 @@
             new Cliente { Id = 18, Nombre = "Carlos Sánchez", Email = "carlos@ejemplo.com", TipoCliente = "Regular", Estado = "A" }
             };
         loading = false;
+
+        await CargarDatos();
+
     }
+
+    private List<AgeIdiomasDAO> prueba = new();
+    private Page<AgeIdiomasDAO> idiomas;
+
+    private int paginaActual = 0;
+    private int tamanioPagina = 5;
+
+    private async Task CargarDatos()
+    {
+        idiomas = await PaginacionService.CargarPagina<AgeIdiomasDAO>("CliClientParamVigencia/1?", paginaActual, tamanioPagina);
+        prueba = idiomas?.Content ?? new List<AgeIdiomasDAO>();
+    }
+
+
 
     private async Task CambiarEstadoCliente(Cliente cliente)
     {
