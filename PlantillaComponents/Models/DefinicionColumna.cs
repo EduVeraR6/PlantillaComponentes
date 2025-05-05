@@ -18,6 +18,8 @@ namespace PlantillaComponents.Models
 
         public bool? PermitirOrdenamiento { get; set; }
 
+        public bool? Registrar {  get; set; }
+
         public bool Editable { get; set; } = true;
 
         public bool Requerido { get; set; } = false;

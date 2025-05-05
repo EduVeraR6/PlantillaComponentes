@@ -1,15 +1,18 @@
 ﻿@typeparam TItem
-
 @using System.Reflection
 
-    @switch (TipoInput?.ToLower())
+@switch (TipoInput?.ToLower())
 {
     case "select":
         if (OpcionesSelect != null)
         {
             <select value="@ValorActual"
                     @onchange="e => ActualizarValorLocal(e.Value?.ToString())"
-                    class="w-full border-solid border-1 focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")">
+                    class="w-full border border-blue-300 focus:border-blue-400 focus:ring-0 bg-white text-black rounded-[15px] px-3 py-1 hover:bg-slate-50 transition-all duration-200 ease-in-out @(TieneError ? "border-red-500" : "")">
+                @if (string.IsNullOrEmpty(ValorActual))
+                {
+                    <option disabled selected value="">Seleccione...</option>
+                }
                 @foreach (var opcion in OpcionesSelect)
                 {
                     <option value="@opcion.Value">@opcion.Text</option>
@@ -17,41 +20,46 @@
             </select>
         }
         break;
+
     case "number":
         <input type="number"
                value="@ValorActual"
                @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
-               class="w-full border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")"
+               class="w-full border border-blue-300 focus:border-blue-400 focus:ring-0 bg-white text-black rounded-[15px] px-3 py-1 hover:bg-slate-50 transition-all duration-200 ease-in-out @(TieneError ? "border-red-500" : "")"
                min="@Min"
                max="@Max"
                step="@Step" />
         break;
+
     case "date":
         <input type="date"
                value="@ValorFechaFormateado"
                @onchange="e => ActualizarValorLocal(e.Value?.ToString())"
-               class="w-full border-solid border-1 focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")" />
+               class="w-full border border-blue-300 focus:border-blue-400 focus:ring-0 bg-white text-black rounded-[15px] px-3 py-1 hover:bg-slate-50 transition-all duration-200 ease-in-out @(TieneError ? "border-red-500" : "")" />
         break;
+
     case "checkbox":
         <input type="checkbox"
                checked="@(ValorActual == "true")"
                @onchange="e => ActualizarValorLocal(((bool)e.Value).ToString())"
-               class="border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 accent-[var(--info)]" />
+               class="border border-blue-300 focus:border-blue-400 focus:ring-0 accent-blue-400 rounded-[15px] @(TieneError ? "border-red-500" : "")" />
         break;
+
     case "textarea":
         <textarea value="@ValorActual"
                   @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
-                  class="w-full border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")"
-                  rows="3">
-                                    </textarea>
+                  class="w-full border border-blue-300 focus:border-blue-400 focus:ring-0 bg-white text-black rounded-[15px] px-3 py-1 hover:bg-slate-50 transition-all duration-200 ease-in-out @(TieneError ? "border-red-500" : "")"
+                  rows="3"></textarea>
         break;
+
     default:
         <input type="text"
                value="@ValorActual"
                @oninput="e => ActualizarValorLocal(e.Value?.ToString())"
-               class="border-solid border-1  focus:border-sky-400 focus:ring-0 border-sky-400 w-full bg-white text-black border rounded rounded-lg px-2 py-1 hover:bg-slate-50 @(TieneError ? "border-red-500" : "")" />
+               class="w-full border border-blue-300 focus:border-blue-400 focus:ring-0 bg-white text-black rounded-[15px] px-3 py-1 hover:bg-slate-50 transition-all duration-200 ease-in-out @(TieneError ? "border-red-500" : "")" />
         break;
 }
+
 @if (TieneError)
 {
     <div class="text-xs text-red-500 mt-1">

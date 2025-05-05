@@ -15,7 +15,7 @@ namespace PlantillaComponents.Components.QueryTable
 {
     public partial class QueryTable<TItem> : ComponentBase where TItem : class
     {
-      
+
         [Parameter] public List<DefinicionColumna<TItem>> Columnas { get; set; } = new();
         [Parameter] public List<TItem> Elementos { get; set; } = new();
         [Parameter] public string Titulo { get; set; }
@@ -29,7 +29,7 @@ namespace PlantillaComponents.Components.QueryTable
         [Parameter] public EventCallback<TItem> AlEliminar { get; set; }
         [Parameter] public string AccesorEstado { get; set; }
         [Parameter] public EventCallback<(TItem, string)> AlCambiarEstado { get; set; }
-        [Parameter] public EventCallback AlNuevo { get; set; }
+        [Parameter] public EventCallback<TItem> AlNuevo { get; set; }
         [Parameter] public EventCallback<List<TItem>> AlEliminarMasivo { get; set; }
         [Parameter] public int PaginaPorDefecto { get; set; } = 0;
         [Parameter] public int TamanoPorDefecto { get; set; } = 5;
@@ -42,24 +42,37 @@ namespace PlantillaComponents.Components.QueryTable
         [Parameter] public string EtiquetaNoEncontrado { get; set; } = "No se encontraron resultados";
         [Parameter] public string EventoRefrescar { get; set; }
         [Parameter] public string PlaceholderBusqueda { get; set; } = "Buscar...";
-
         [Parameter] public List<TItem> Datos { get; set; } = new();
         [Parameter] public bool Cargando { get; set; } = false;
         [Parameter] public int TamanoPagina { get; set; } = 5;
 
-        // Propiedades del componente
+        //PROPIEDADES CONTROL ACCIONES
+
+        private bool AccionEnProceso { get; set; } = false;
+        private string AccionActual { get; set; } = string.Empty;
+
+        //PROPIEDADES INSERCION REGISTRO
+
+        private bool MostrarNuevoRegistro = false;
+
+        private TItem NuevoItem;
+
+
+        //PROPIEDADES PAGINACION
         private int TotalElementos { get; set; } = 0;
+        private int IndicePagina { get; set; }
+        private bool EsMovil { get; set; } = false;
+
+        // PROPIEDADES GENERALES
         private bool HayError { get; set; } = false;
         private string FiltroGlobal { get; set; } = "";
-        private int IndicePagina { get; set; }
         private string OrdenConsulta { get; set; } = "";
         private Dictionary<string, bool> FilasExpandidas { get; set; } = new();
         private List<TItem> FilasSeleccionadas { get; set; } = new();
         private bool MostrarConfirmacionEliminarMasivo { get; set; } = false;
-        private bool EsMovil { get; set; } = false;
         private TItem DatosSuperpuestos { get; set; }
         private Posicion PosicionSuperpuesta { get; set; }
-        private System.Threading.Timer _temporizadorBusqueda;
+        private Timer _temporizadorBusqueda;
         private List<TItem> ElementosFiltrados { get; set; } = new();
         private List<TItem> ElementosPaginados { get; set; } = new();
         private Dictionary<string, bool> FilaEnEdicion { get; set; } = new();
@@ -69,6 +82,7 @@ namespace PlantillaComponents.Components.QueryTable
         private bool ordenAscendente = true;
 
         private Dictionary<string, Dictionary<string, string>> ValoresTemporales = new Dictionary<string, Dictionary<string, string>>();
+
         private Dictionary<string, Dictionary<string, string>> ErroresValidacion = new Dictionary<string, Dictionary<string, string>>();
 
         protected override async Task OnInitializedAsync()
@@ -86,6 +100,8 @@ namespace PlantillaComponents.Components.QueryTable
 
         protected override async Task OnParametersSetAsync()
         {
+            IniciarAccion("actualizando-parametros");
+
             ElementosFiltrados = Elementos.Where(e =>
                 string.IsNullOrEmpty(FiltroGlobal) ||
                 ContieneFiltro(e, FiltroGlobal)
@@ -95,6 +111,8 @@ namespace PlantillaComponents.Components.QueryTable
             AplicarPaginado();
 
             await base.OnParametersSetAsync();
+
+            FinalizarAccion();
         }
 
         private bool ContieneFiltro(TItem elemento, string filtro)
@@ -114,18 +132,24 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void CambiarFiltroGlobal(ChangeEventArgs e)
         {
+            IniciarAccion("configurando-filtro");
+
             FiltroGlobal = e.Value?.ToString() ?? "";
             IndicePagina = 0;
 
             _temporizadorBusqueda?.Dispose();
-            _temporizadorBusqueda = new System.Threading.Timer(async _ =>
+            _temporizadorBusqueda = new Timer(async _ =>
             {
                 await InvokeAsync(() =>
                 {
+                    IniciarAccion("aplicando-filtro");
                     FiltrarDatos();
                     StateHasChanged();
+                    FinalizarAccion();
                 });
             }, null, RetardoBusqueda, Timeout.Infinite);
+
+            FinalizarAccion();
         }
 
         private void LimpiarFiltroGlobal()
@@ -137,12 +161,16 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void FiltrarDatos()
         {
+            IniciarAccion("filtrado");
+
             ElementosFiltrados = Elementos.Where(e =>
                 string.IsNullOrEmpty(FiltroGlobal) || ContieneFiltro(e, FiltroGlobal)
             ).ToList();
 
             TotalElementos = ElementosFiltrados.Count;
             AplicarPaginado();
+
+            FinalizarAccion();
         }
 
         private void AplicarPaginado()
@@ -184,18 +212,26 @@ namespace PlantillaComponents.Components.QueryTable
 
         private async Task EliminarElemento(TItem item)
         {
+            IniciarAccion("eliminar");
+
             await InvokeAsync(StateHasChanged);
             PosicionSuperpuesta = await JS.InvokeAsync<Posicion>("obtenerPosicionElemento", "btnEliminarCliente");
             DatosSuperpuestos = item;
+
+            FinalizarAccion();
         }
 
         private async Task ConfirmarEliminar()
         {
+            IniciarAccion("confirmando-eliminacion");
+
             if (DatosSuperpuestos != null)
             {
                 await AlEliminar.InvokeAsync(DatosSuperpuestos);
             }
             DatosSuperpuestos = default;
+
+            FinalizarAccion();
         }
 
         private void CancelarEliminar()
@@ -208,91 +244,55 @@ namespace PlantillaComponents.Components.QueryTable
             if (string.IsNullOrEmpty(AccesorEstado) || !AlCambiarEstado.HasDelegate)
                 return;
 
+            IniciarAccion("cambio-estado");
+
             var estadoActual = ObtenerValorPropiedad(item, AccesorEstado)?.ToString();
             var nuevoEstado = estadoActual == "A" ? "I" : "A";
 
             await AlCambiarEstado.InvokeAsync((item, nuevoEstado));
+
+            FinalizarAccion();
         }
 
         private async Task ConfirmarEliminarMasivo()
         {
+            IniciarAccion("eliminar-masivo");
+
             if (AlEliminarMasivo.HasDelegate && FilasSeleccionadas.Count > 0)
             {
                 await AlEliminarMasivo.InvokeAsync(FilasSeleccionadas);
             }
             FilasSeleccionadas.Clear();
             MostrarConfirmacionEliminarMasivo = false;
+
+            FinalizarAccion();
         }
 
-        private void IrPrimeraPagina()
-        {
-            if (IndicePagina > 0)
-            {
-                IndicePagina = 0;
-                AplicarPaginado();
-            }
-        }
-
-        private void IrPaginaAnterior()
-        {
-            if (IndicePagina > 0)
-            {
-                IndicePagina--;
-                AplicarPaginado();
-            }
-        }
-
-        private void IrPaginaSiguiente()
-        {
-            int totalPaginas = GetTotalPages();
-            if (IndicePagina < totalPaginas - 1)
-            {
-                IndicePagina++;
-                AplicarPaginado();
-            }
-        }
-
-        private void IrUltimaPagina()
-        {
-            int totalPaginas = GetTotalPages();
-            if (IndicePagina < totalPaginas - 1)
-            {
-                IndicePagina = totalPaginas - 1;
-                AplicarPaginado();
-            }
-        }
+        //PAGINACION
 
         private void IrPagina(int pagina)
         {
+            IniciarAccion("cambio-pagina");
+
             IndicePagina = pagina;
             AplicarPaginado();
+
+            FinalizarAccion();
         }
 
-        private List<int> ObtenerPaginasParaMostrar()
+        private async Task CambiarTamanoPagina(int nuevoTamano)
         {
-            int totalPaginas = GetTotalPages();
-            int maxPaginas = EsMovil ? 3 : PaginasAMostrar;
-            int inicio = Math.Max(0, IndicePagina - maxPaginas / 2);
-            int fin = Math.Min(totalPaginas - 1, inicio + maxPaginas - 1);
+            IniciarAccion("cambio-tamano");
 
-            if (fin - inicio < maxPaginas - 1)
-            {
-                inicio = Math.Max(0, fin - maxPaginas + 1);
-            }
+            TamanoPagina = nuevoTamano;
+            IndicePagina = 0;
+            AplicarPaginado();
 
-            return Enumerable.Range(inicio, fin - inicio + 1).ToList();
+            FinalizarAccion();
         }
 
-        private async Task CambiarTamanoPagina(ChangeEventArgs e)
-        {
-            if (int.TryParse(e.Value?.ToString(), out int nuevoTamano))
-            {
-                TamanoPagina = nuevoTamano;
-                IndicePagina = 0;
-                AplicarPaginado();
-            }
-        }
 
+        //METODOS OBTENCION PROPIEDADES
         private int ObtenerCantidadColumnas()
         {
             int cantidad = Columnas.Count;
@@ -327,24 +327,13 @@ namespace PlantillaComponents.Components.QueryTable
             return "";
         }
 
-        private int GetTotalPages()
-        {
-            return (int)Math.Ceiling((double)TotalElementos / TamanoPagina);
-        }
-
-        private int GetFirstItemIndex()
-        {
-            return TotalElementos == 0 ? 0 : IndicePagina * TamanoPagina + 1;
-        }
-
-        private int GetLastItemIndex()
-        {
-            return Math.Min((IndicePagina + 1) * TamanoPagina, TotalElementos);
-        }
 
         // LOGICA EDICION FILA 
         private void AlternarEdicionFila(string idFila, TItem item)
         {
+            IniciarAccion("editar-registro");
+
+
             if (FilaEnEdicion.ContainsKey(idFila))
             {
                 FilaEnEdicion[idFila] = !FilaEnEdicion[idFila];
@@ -461,7 +450,7 @@ namespace PlantillaComponents.Components.QueryTable
                     ErroresValidacion[rowId][propertyName] = ex.Message;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }
@@ -469,6 +458,7 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void RegistrarCambioInput(TItem item, string accesor, string valor)
         {
+
             var rowId = item.GetHashCode().ToString();
 
             if (!ValoresTemporales.ContainsKey(rowId))
@@ -481,6 +471,7 @@ namespace PlantillaComponents.Components.QueryTable
 
         private void ValidarYGuardarCambios(TItem item)
         {
+
             var rowId = item.GetHashCode().ToString();
 
             if (!ValoresTemporales.ContainsKey(rowId) || !ValoresTemporales[rowId].Any())
@@ -547,11 +538,13 @@ namespace PlantillaComponents.Components.QueryTable
         private void GuardarCambios(TItem item, string idFila)
         {
             AlSeleccionar.InvokeAsync(item);
+            FinalizarAccion();
             FilaEnEdicion[idFila] = false;
         }
 
         private void CancelarEdicion(string idFila)
         {
+            FinalizarAccion();
             FilaEnEdicion[idFila] = false;
         }
 
@@ -623,5 +616,167 @@ namespace PlantillaComponents.Components.QueryTable
 
             AplicarPaginado();
         }
+
+        private void IniciarNuevoRegistro()
+        {
+            IniciarAccion("registrar");
+
+            // Crear una nueva instancia del tipo genérico
+            NuevoItem = Activator.CreateInstance<TItem>();
+            MostrarNuevoRegistro = true;
+
+        }
+
+        //NUEVO REGISTRO METODOS
+        private async Task GuardarNuevoRegistro()
+        {
+
+            var rowId = NuevoItem?.GetHashCode().ToString();
+
+            if (string.IsNullOrEmpty(rowId))
+            {
+                FinalizarAccion();
+                return;
+            }
+
+            // Limpiar errores anteriores
+            if (ErroresValidacion.ContainsKey(rowId))
+            {
+                ErroresValidacion[rowId].Clear();
+            }
+
+            bool esValido = true;
+
+            if (ValoresTemporales.ContainsKey(rowId))
+            {
+                var valoresTemp = ValoresTemporales[rowId];
+
+                foreach (var column in Columnas)
+                {
+                    if (valoresTemp.ContainsKey(column.Accesor))
+                    {
+                        var valor = valoresTemp[column.Accesor];
+
+                        // Usar reflexión para asignar el valor al NuevoItem
+                        var propiedad = typeof(TItem).GetProperty(column.Accesor);
+                        if (propiedad != null)
+                        {
+                            try
+                            {
+                                // Convertir el valor al tipo adecuado de la propiedad
+                                var valorConvertido = Convert.ChangeType(valor, propiedad.PropertyType);
+                                propiedad.SetValue(NuevoItem, valorConvertido);
+                                StateHasChanged();
+                            }
+                            catch (Exception ex)
+                            {
+                                // En caso de error al convertir, puedes manejarlo aquí
+                                esValido = false;
+                                if (!ErroresValidacion.ContainsKey(rowId))
+                                {
+                                    ErroresValidacion[rowId] = new Dictionary<string, string>();
+                                }
+
+                                ErroresValidacion[rowId][column.Accesor] = $"Error al convertir el valor: {ex.Message}";
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var column in Columnas.Where(c => c.Registrar != false))
+            {
+                var valor = ObtenerValorPropiedad(NuevoItem, column.Accesor)?.ToString() ?? string.Empty;
+
+                if (column.Requerido && string.IsNullOrWhiteSpace(valor))
+                {
+                    if (!ErroresValidacion.ContainsKey(rowId))
+                        ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                    ErroresValidacion[rowId][column.Accesor] = "Este campo es requerido";
+                    Console.WriteLine($"Este campo es requerido {column.Accesor}");
+                    esValido = false;
+                    continue;
+                }
+
+                // VALIDAR REGEX
+                if (!string.IsNullOrEmpty(column.PatronRegex) && !string.IsNullOrEmpty(valor))
+                {
+                    var regex = new Regex(column.PatronRegex);
+                    if (!regex.IsMatch(valor))
+                    {
+                        if (!ErroresValidacion.ContainsKey(rowId))
+                            ErroresValidacion[rowId] = new Dictionary<string, string>();
+
+                        ErroresValidacion[rowId][column.Accesor] = column.MensajeError ?? "Formato inválido";
+                        Console.WriteLine($"Formato inválido {column.Accesor}");
+                        esValido = false;
+                        continue;
+                    }
+                }
+            }
+
+            if (!esValido)
+            {
+                StateHasChanged(); // Actualizar interfaz para mostrar errores
+                return;
+            }
+
+            if (AlNuevo.HasDelegate)
+            {
+                await AlNuevo.InvokeAsync(NuevoItem);
+                FinalizarAccion();
+            }
+
+            MostrarNuevoRegistro = false;
+
+            if (ErroresValidacion.ContainsKey(rowId))
+                ErroresValidacion.Remove(rowId);
+            if (ValoresTemporales.ContainsKey(rowId))
+                ValoresTemporales.Remove(rowId);
+
+            NuevoItem = default;
+           
+            StateHasChanged();
+        }
+
+        private void CancelarNuevoRegistro()
+        {
+            MostrarNuevoRegistro = false;
+
+            if (NuevoItem != null)
+            {
+                var rowId = NuevoItem.GetHashCode().ToString();
+
+                if (ErroresValidacion.ContainsKey(rowId))
+                {
+                    ErroresValidacion.Remove(rowId);
+                }
+
+
+            }
+            FinalizarAccion();
+            NuevoItem = default;
+            StateHasChanged();
+        }
+
+        //CONTROL ACCIONES METODOS
+
+        private void IniciarAccion(string nombreAccion)
+        {
+            AccionEnProceso = true;
+            AccionActual = nombreAccion;
+            StateHasChanged();
+        }
+
+        private void FinalizarAccion()
+        {
+            AccionEnProceso = false;
+            AccionActual = string.Empty;
+            StateHasChanged();
+        }
+
+
+
     }
 }

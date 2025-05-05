@@ -8,3 +8,15 @@ window.setThemeClass = function (theme) {
         root.classList.remove('dark');
     }
 }
+
+function MostrarSpinner() {
+
+    const loadingElement = document.getElementById('app');
+    loadingElement.classList.remove('hidden');
+
+}
+
+function OcultarSpinner() {
+    const loadingElement = document.getElementById('app');
+    loadingElement.classList.add('hidden');
+}

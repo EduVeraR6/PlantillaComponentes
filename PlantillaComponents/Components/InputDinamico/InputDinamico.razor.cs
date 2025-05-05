@@ -19,9 +19,12 @@ namespace PlantillaComponents.Components.InputDinamico
         [Parameter] public string Max { get; set; }
         [Parameter] public string Step { get; set; }
         [Parameter] public bool TieneError { get; set; }
+        [Parameter] public string Placeholder { get; set; }
         [Parameter] public string MensajeError { get; set; }
         [Parameter] public string ValorInicial { get; set; }
         [Parameter] public EventCallback<(string Accesor, string Valor)> OnInputChange { get; set; }
+
+        private bool _valorInicialRegistrado = false;
 
         private string _valorLocal;
         private string ValorActual => _valorLocal ?? ObtenerValorPropiedad(Item, Accesor)?.ToString();
@@ -31,6 +34,15 @@ namespace PlantillaComponents.Components.InputDinamico
         {
             _valorLocal = ObtenerValorPropiedad(Item, Accesor)?.ToString();
             base.OnInitialized();
+        }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender && !_valorInicialRegistrado && !string.IsNullOrWhiteSpace(ValorActual))
+            {
+                _valorInicialRegistrado = true;
+                await OnInputChange.InvokeAsync((Accesor, ValorActual));
+            }
         }
 
         private void ActualizarValorLocal(string valor)

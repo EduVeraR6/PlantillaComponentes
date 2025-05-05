@@ -1,0 +1,60 @@
+﻿
+    <div class="flex justify-center text-[var(--font)] items-center mt-4 space-x-2 flex-wrap">
+        <!-- Records info -->
+        <div class="flex items-center space-x-2 py-2">
+            <span class="text-[var(--font)] text-sm text-center md:text-left align-middle">
+                Mostrando del registro @GetFirstItemIndex() al @GetLastItemIndex() de @TotalElementos
+            </span>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+
+            <button type="button"
+                    @onclick="IrPrimeraPagina"
+                disabled="@(IndicePagina == 0 || EnProcesoAccion)"
+                    class="px-3 py-1 bg-[var(--bg)] rounded-md @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--disabled)]") disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-angle-double-left text-[var(--font)]"></i>
+            </button>
+            <button type="button"
+                    @onclick="IrPaginaAnterior"
+                    disabled="@(IndicePagina == 0 || EnProcesoAccion)"
+                    class="px-3 py-1 bg-[var(--bg)] rounded-md @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--disabled)]") disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-angle-left text-[var(--font)]"></i>
+            </button>
+
+            @foreach (var page in ObtenerPaginasParaMostrar())
+            {
+                var currentPage = page;
+                <button type="button"
+                        @onclick="() => IrPagina(currentPage)"
+                        disabled="@EnProcesoAccion"
+                        class="px-3 py-1 rounded-md text-[var(--font)] @(currentPage == IndicePagina ? "bg-[var(--secondaryalt)]" : "bg-[var(--bg)]") @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--disabled)]")">
+                    @(currentPage + 1)
+                </button>
+            }
+
+            <button type="button"
+                    @onclick="IrPaginaSiguiente"
+                    disabled="@(IndicePagina >= GetTotalPages() - 1 || EnProcesoAccion)"
+                    class="px-3 py-1 bg-[var(--bg)] rounded-md @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--disabled)]") disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-angle-right text-[var(--font)]"></i>
+            </button>
+
+            <button type="button"
+                    @onclick="IrUltimaPagina"
+                    disabled="@(IndicePagina >= GetTotalPages() - 1 || EnProcesoAccion)"
+                    class="px-3 py-1 bg-[var(--bg)] rounded-md @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--disabled)]") disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-angle-double-right text-[var(--font)]"></i>
+            </button>
+
+        </div>
+
+        <select value="@TamanoPagina"
+                @onchange="CambiarTamanoPagina"
+                disabled="@EnProcesoAccion"
+                class="ml-2 p-2 bg-[var(--secondaryalt)] text-[var(--font)] rounded md:mt-0 mt-3 @(EnProcesoAccion ? "opacity-50 cursor-not-allowed" : "")">
+            <option value="5" class="hover:bg-[var(--secondaryalthover)]">Mostrar 5</option>
+            <option value="10" class="hover:bg-[var(--secondaryalthover)]">Mostrar 10</option>
+            <option value="20" class="hover:bg-[var(--secondaryalthover)]">Mostrar 20</option>
+        </select>
+    </div>

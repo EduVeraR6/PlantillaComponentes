@@ -10,6 +10,7 @@
 @using Microsoft.Extensions.Logging
 @using System.Text.RegularExpressions
 @using PlantillaComponents.Components.InputDinamico
+@using PlantillaComponents.Components.Paginacion
 @using PlantillaComponents.Components.Toggle
 @inject IJSRuntime JS
 @inject HttpClient Http
@@ -32,12 +33,14 @@
                     <input type="text"
                            value="@FiltroGlobal"
                            @oninput="CambiarFiltroGlobal"
+                           disabled="@AccionEnProceso"
                            placeholder="@PlaceholderBusqueda"
                            class="flex-1 p-2 bg-transparent text-[var(--font)] placeholder-[var(--placeholder)] focus:outline-none w-[25%]" />
                     @if (!string.IsNullOrEmpty(FiltroGlobal))
                     {
                         <button type="button"
                                 @onclick="LimpiarFiltroGlobal"
+                                disabled="@AccionEnProceso"
                                 class="absolute right-2 text-[var(--placeholder)] hover:text-[var(--font)] focus:outline-none">
                             <i class="fas fa-times"></i>
                         </button>
@@ -45,18 +48,18 @@
                 </div>
             }
 
-            @if (AlNuevo.HasDelegate)
-            {
-                <button type="button" @onclick="AlNuevo" class="w-9 h-9 flex items-center justify-center bg-[var(--info)] text-white rounded hover:bg-blue-400">
-                    <i class="fas fa-plus text-sm"></i>
-                </button>
-            }
+            <button type="button"
+                    @onclick="IniciarNuevoRegistro"
+                    class="w-9 h-9 flex items-center justify-center @(AccionEnProceso ? "bg-gray-400 cursor-not-allowed" : "bg-[var(--info)] hover:bg-blue-400") text-white rounded"
+                    disabled="@AccionEnProceso">
+                <i class="fas fa-plus text-sm"></i>
+            </button>
         </div>
     </div>
 
     <!-- Table with scroll horizontal -->
     <div class="overflow-x-auto rounded-xl border border-[var(--border)] shadow-md">
-        <table class="min-w-full bg-[var(--bg)] text-[var(--font)] text-left">
+        <table class="min-w-full bg-[var(--bg)] text-[var(--font)] text-center">
             <thead class="border-b bg-[var(--secondaryalt)] text-[var(--font)]">
                 <tr>
                     @if (FilaExpandida != null)
@@ -71,13 +74,13 @@
                                         @onclick="() => MostrarConfirmacionEliminarMasivo = true"
                                         class="p-1 rounded-md text-[var(--error)] hover:text-red-600 @(FilasSeleccionadas.Count == 0 ? "opacity-50 cursor-not-allowed" : "")"
                                         title="Eliminar seleccionados"
-                                        disabled="@(FilasSeleccionadas.Count == 0)">
+                                        disabled="@(FilasSeleccionadas.Count == 0 || AccionEnProceso)">
                                     <i class="fas fa-trash-alt text-lg"></i>
                                 </button>
                             </div>
                         </th>
                     }
-                    @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate)
+                    @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate || AlNuevo.HasDelegate)
                     {
                         <th class="px-4 py-3 text-sm font-semibold border-[var(--border)] whitespace-nowrap w-[10%]">
                             <div class="flex items-center justify-center">Acciones</div>
@@ -100,6 +103,81 @@
                 </tr>
             </thead>
             <tbody>
+                @if (MostrarNuevoRegistro)
+                {
+                    <tr class="border-b border-[var(--border)] text-center bg-[var(--secondaryalthover)]">
+                        @if (FilaExpandida != null)
+                        {
+                            <td class="whitespace-nowrap px-2 py-4 text-sm text-center font-light border-[var(--border)]"></td>
+                        }
+                        @if (AlEliminarMasivo.HasDelegate)
+                        {
+                            <td class="px-4 py-3 text-sm text-center font-light border-[var(--border)] whitespace-nowrap w-[1%]"></td>
+                        }
+                        @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate || AlNuevo.HasDelegate)
+                        {
+                            <td class="px-4 py-3 text-sm font-light border-[var(--border)] whitespace-nowrap w-[10%]">
+                                <div class="flex items-center justify-center space-x-2 relative">
+                                    <button class="text-blue-500 hover:text-[var(--info)]" title="Guardar"
+                                            @onclick="GuardarNuevoRegistro">
+                                        <i class="fa-solid fa-check text-lg"></i>
+                                    </button>
+                                    <button class="text-red-500 hover:text-[var(--error)]" title="Cancelar"
+                                            @onclick="CancelarNuevoRegistro">
+                                        <i class="fa-solid fa-xmark text-lg"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        }
+                        @foreach (var column in Columnas)
+                        {
+
+                            var whitespaceClass = column.ClaseCss?.Contains("whitespace-normal") == true ? "" : "whitespace-nowrap";
+
+                            @if (AccesorEstado != null && column.Accesor == AccesorEstado)
+                            {
+                                @if (column.Registrar == false)
+                                {
+
+                                    <td class="px-4 py-3 text-sm font-light border-[var(--border)] whitespace-nowrap @(column.ClaseCss ?? "")">
+                                        <div class="flex items-center justify-center">
+                                            <Toggle Disabled="@AccionEnProceso" IsActive="@("A" == "A")" />
+                                        </div>
+                                    </td>
+                                }
+
+                            }
+                            else
+                            {
+                                <td class="px-4 py-3 text-sm font-light border-[var(--border)]  whitespace-nowrap @(column.ClaseCss ?? "")">
+                                    <div class="relative">
+                                        @if (column.Registrar == true)
+                                        {
+                                            <InputDinamico TItem="TItem"
+                                                           Item="NuevoItem"
+                                                           Placeholder="@column.Encabezado"
+                                                           Accesor="@column.Accesor"
+                                                           TipoInput="@column.TipoInput"
+                                                           OpcionesSelect="@column.OpcionesSelect"
+                                                           Min="@column.Min"
+                                                           Max="@column.Max"
+                                                           Step="@column.Step"
+                                                           TieneError="@TieneErrorValidacion(NuevoItem, column.Accesor)"
+                                                           MensajeError="@ObtenerMensajeError(NuevoItem, column.Accesor)"
+                                                           OnInputChange="@((tuple) => RegistrarCambioInput(NuevoItem, tuple.Accesor, tuple.Valor))" />
+                                        }
+                                        else
+                                        {
+                                            <span>@ObtenerValorPropiedad(NuevoItem, column.Accesor)</span>
+                                        }
+                                    </div>
+                                </td>
+
+                            }
+                        }
+                    </tr>
+                }
+
                 @if (HayError)
                 {
                     <tr class="border-b border-[var(--border)]">
@@ -136,10 +214,10 @@
                                     <button type="button"
                                             @onclick="() => AlternarExpansionFila(rowId, item)"
                                             class="focus:outline-none transition-transform duration-300 flex items-center justify-center
-                                                @(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item)
+                                                @(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item) || AccionEnProceso
                                                     ? "cursor-not-allowed text-[var(--disabled)] opacity-50"
                                                     : "cursor-pointer hover:text-[var(--hover)]")"
-                                            disabled="@(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item))">
+                                            disabled="@(DeshabilitarFilaExpandida != null && DeshabilitarFilaExpandida(item) || AccionEnProceso)">
                                         <span class="inline-block transition-transform duration-300 @(FilasExpandidas.ContainsKey(rowId) && FilasExpandidas[rowId] ? "rotate-90" : "rotate-0")">
                                             <i class="fas fa-chevron-right"></i>
                                         </span>
@@ -148,23 +226,24 @@
                             }
                             @if (AlEliminarMasivo.HasDelegate)
                             {
-                                <td class="px-6 py-4 text-sm font-light border-[var(--border)] whitespace-nowrap w-[1%]">
+                                <td class="px-4 py-3 text-sm font-light border-[var(--border)] whitespace-nowrap w-[1%]">
                                     <input type="checkbox"
                                            class="accent-border-dark"
                                            checked="@(FilasSeleccionadas.Contains(item))"
-                                           @onchange="() => SeleccionarFila(item)" />
+                                           @onchange="() => SeleccionarFila(item)"
+                                           disabled="@AccionEnProceso" />
                                 </td>
                             }
                             @if (AlSeleccionar.HasDelegate || AlEliminar.HasDelegate)
                             {
-                                <td class="px-6 py-4 text-sm font-light border-[var(--border)] whitespace-nowrap w-[10%]">
+                                <td class="px-4 py-3 text-sm font-light border-[var(--border)] whitespace-nowrap w-[10%]">
                                     <div class="flex items-center justify-center space-x-2 relative">
 
                                         @if (FilaEnEdicion.ContainsKey(rowId) && FilaEnEdicion[rowId])
                                         {
                                             <button class="text-blue-500 hover:text-[var(--info)]" title="Guardar"
                                                     @onclick="@(() => ValidarYGuardarCambios(item))">
-                                                <i class="fa-solid fa-floppy-disk text-lg"></i>
+                                                <i class="fa-solid fa-check text-lg"></i>
                                             </button>
                                             <button class="text-red-500 hover:text-[var(--error)]" title="Cancelar"
                                                     @onclick="@(() => CancelarEdicion(rowId))">
@@ -177,8 +256,9 @@
                                             {
                                                 <button type="button"
                                                         @onclick="() => AlternarEdicionFila(rowId, item)"
-                                                        class="text-blue-500 hover:text-[var(--info)]"
-                                                        title="Editar">
+                                                        class="text-blue-500 @(AccionEnProceso ? "opacity-50 cursor-not-allowed" : "hover:text-[var(--info)]")"
+                                                        title="Editar"
+                                                        disabled="@AccionEnProceso">
                                                     <i class="fas fa-edit text-lg"></i>
                                                 </button>
                                             }
@@ -187,8 +267,9 @@
                                                 <button type="button"
                                                         id="btnEliminarCliente"
                                                         @onclick="@(() => EliminarElemento(item))"
-                                                        class="text-red-500 hover:text-[var(--error)]"
-                                                        title="Eliminar">
+                                                        class="text-red-500 @(AccionEnProceso ? "opacity-50 cursor-not-allowed" : "hover:text-[var(--error)]")"
+                                                        title="Eliminar"
+                                                        disabled="@AccionEnProceso">
                                                     <i class="fas fa-trash-alt text-lg"></i>
                                                 </button>
                                             }
@@ -206,15 +287,15 @@
                                 {
                                     var status = ObtenerValorPropiedad(item, AccesorEstado)?.ToString();
 
-                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
+                                    <td class="px-4 py-3 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
                                         <div class="flex items-center justify-center">
-                                            <Toggle IsActive="@(status == "A")" OnToggle="() => CambiarEstado(item)" />
+                                            <Toggle Disabled="@AccionEnProceso" IsActive="@(status == "A")" OnToggle="() => CambiarEstado(item)" />
                                         </div>
                                     </td>
                                 }
                                 else
                                 {
-                                    <td class="px-6 py-4 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
+                                    <td class="px-4 py-3 text-sm font-light border-[var(--border)] @whitespaceClass @(column.ClaseCss ?? "")">
                                         @if (FilaEnEdicion.ContainsKey(rowId) && FilaEnEdicion[rowId])
                                         {
                                             @if (column.Editable == false)
@@ -223,8 +304,6 @@
                                             }
                                             else
                                             {
-
-
                                                 <div class="relative">
                                                     <InputDinamico TItem="TItem"
                                                                    Item="item"
@@ -238,7 +317,6 @@
                                                                    MensajeError="@ObtenerMensajeError(item, column.Accesor)"
                                                                    OnInputChange="@((tuple) => RegistrarCambioInput(item, tuple.Accesor, tuple.Valor))" />
                                                 </div>
-
                                             }
                                         }
                                         else
@@ -266,67 +344,16 @@
         </table>
     </div>
 
-    <!-- Pagination -->
-    @if (MostrarOpciones && TotalElementos > 0)
-    {
-        <div class="flex justify-center text-[var(--font)] items-center mt-4 space-x-2 flex-wrap">
-            <!-- Records info -->
-            <div class="flex items-center space-x-2 py-2">
-                <span class="text-[var(--font)] text-sm text-center md:text-left align-middle">
-                    Mostrando del registro @GetFirstItemIndex() al @GetLastItemIndex() de @TotalElementos
-                </span>
-            </div>
+    <Paginacion IndicePagina="@IndicePagina"
+                IndicePaginaChanged="@IrPagina"
+                TamanoPagina="@TamanoPagina"
+                TamanoPaginaChanged="@CambiarTamanoPagina"
+                TotalElementos="@TotalElementos"
+                PaginasAMostrar="@PaginasAMostrar"
+                EsMovil="@EsMovil"
+                OnAccionIniciada="@((bool e) => IniciarAccion("cambio-pagina"))"
+                OnAccionFinalizada="@((bool e) => FinalizarAccion())" />
 
-            <div class="flex gap-2 flex-wrap">
-
-                <button type="button"
-                        @onclick="IrPrimeraPagina"
-                        disabled="@(IndicePagina == 0)"
-                        class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas fa-angle-double-left text-[var(--font)]"></i>
-                </button>
-                <button type="button"
-                        @onclick="IrPaginaAnterior"
-                        disabled="@(IndicePagina == 0)"
-                        class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas fa-angle-left text-[var(--font)]"></i>
-                </button>
-
-                @foreach (var page in ObtenerPaginasParaMostrar())
-                {
-                    var currentPage = page;
-                    <button type="button"
-                            @onclick="() => IrPagina(currentPage)"
-                            class="px-3 py-1 rounded-md text-[var(--font)] @(currentPage == IndicePagina ? "bg-[var(--secondaryalt)]" : "bg-[var(--bg)] hover:bg-[var(--disabled)]")">
-                        @(currentPage + 1)
-                    </button>
-                }
-
-                <button type="button"
-                        @onclick="IrPaginaSiguiente"
-                        disabled="@(IndicePagina >= GetTotalPages() - 1)"
-                        class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas fa-angle-right text-[var(--font)]"></i>
-                </button>
-
-                <button type="button"
-                        @onclick="IrUltimaPagina"
-                        disabled="@(IndicePagina >= GetTotalPages() - 1)"
-                        class="px-3 py-1 bg-[var(--bg)] rounded-md hover:bg-[var(--disabled)] disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fas fa-angle-double-right text-[var(--font)]"></i>
-                </button>
-
-            </div>
-
-            <select value="@TamanoPagina"
-                    @onchange="CambiarTamanoPagina"
-                    class="ml-2 p-2 bg-[var(--secondaryalt)] text-[var(--font)] rounded md:mt-0 mt-3">
-                <option value="5" class="hover:bg-[var(--secondaryalthover)]">Mostrar 5</option>
-                <option value="10" class="hover:bg-[var(--secondaryalthover)]">Mostrar 10</option>
-                <option value="20" class="hover:bg-[var(--secondaryalthover)]">Mostrar 20</option>
-            </select>
-        </div>
-    }
 
     <!--Modal confirmar Eliminar-->
     @if (DatosSuperpuestos != null && PosicionSuperpuesta != null)

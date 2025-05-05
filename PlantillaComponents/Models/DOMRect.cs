@@ -29,6 +29,12 @@ namespace PlantillaComponents.Models
         public string Email { get; set; }
         public string TipoCliente { get; set; }
         public string Estado { get; set; }
+
+        public override string ToString()
+        {
+            return $"Id: {Id}, Nombre: {Nombre}, Email: {Email}, Tipo Cliente: {TipoCliente} , Estado: {Estado} ";
+        }
+
     }
 
 

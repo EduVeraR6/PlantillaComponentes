@@ -1,0 +1,15 @@
+﻿<!-- Shared/LoadingSpinner.razor -->
+<div id="loading" class="fixed inset-0 flex flex-col items-center justify-center bg-blue-500 bg-opacity-80 z-50 @(_isVisible ? "" : "hidden")">
+    <div class="flex flex-col items-center">
+        <span class="loader"></span>
+    </div>
+    <div class="fixed min-h-80 mt-16">
+        <p class="mt-4 text-gray-50 font-semibold">Cargando...</p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Show { get; set; }
+
+    private bool _isVisible => Show;
+}
