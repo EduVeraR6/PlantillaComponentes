@@ -130,27 +130,28 @@ namespace PlantillaComponents.Components.QueryTable
             return false;
         }
 
-        private void CambiarFiltroGlobal(ChangeEventArgs e)
+        private async Task CambiarFiltroGlobal(ChangeEventArgs e)
         {
-            IniciarAccion("configurando-filtro");
-
             FiltroGlobal = e.Value?.ToString() ?? "";
             IndicePagina = 0;
-
-            _temporizadorBusqueda?.Dispose();
-            _temporizadorBusqueda = new Timer(async _ =>
-            {
-                await InvokeAsync(() =>
-                {
-                    IniciarAccion("aplicando-filtro");
-                    FiltrarDatos();
-                    StateHasChanged();
-                    FinalizarAccion();
-                });
-            }, null, RetardoBusqueda, Timeout.Infinite);
-
+            IniciarAccion("aplicando-filtro");
+            FiltrarDatos();
             FinalizarAccion();
+            await InvokeAsync(StateHasChanged);
         }
+
+        private async Task DetectarEnter(KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+                IniciarAccion("aplicando-filtro");
+                IndicePagina = 0;
+                FiltrarDatos();
+                FinalizarAccion();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
 
         private void LimpiarFiltroGlobal()
         {
